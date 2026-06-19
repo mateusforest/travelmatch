@@ -1,0 +1,135 @@
+"use server"
+
+import { randomUUID } from "crypto"
+import { redirect } from "next/navigation"
+import { createMercadoPagoPreference } from "@/lib/mercado-pago"
+import { createCheckoutIntentPayload } from "@/lib/payments"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+
+type PlanSlug = "pro" | "premium"
+type PromotionType = "featured_7" | "featured_15" | "featured_30" | "boost"
+
+const promotionProducts: Record<PromotionType, { title: string; amount: number; days: number | null }> = {
+  featured_7: { title: "Destaque 7 dias", amount: 97, days: 7 },
+  featured_15: { title: "Destaque 15 dias", amount: 197, days: 15 },
+  featured_30: { title: "Destaque 30 dias", amount: 497, days: 30 },
+  boost: { title: "TravelMatch Boost", amount: 987, days: null },
+}
+
+async function requireAgency() {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Sessao expirada. Faca login novamente.")
+  }
+
+  const { data: agency, error } = await supabase
+    .from("agency_profiles")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (error || !agency) {
+    throw new Error("Perfil da agencia nao encontrado.")
+  }
+
+  return { supabase, agencyId: agency.id as string }
+}
+
+export async function checkoutSubscription(planSlug: PlanSlug) {
+  const { supabase, agencyId } = await requireAgency()
+
+  const { data: plan, error: planError } = await supabase
+    .from("subscription_plans")
+    .select("id,slug,name,price")
+    .eq("slug", planSlug)
+    .eq("active", true)
+    .maybeSingle()
+
+  if (planError || !plan) {
+    throw new Error("Plano nao encontrado.")
+  }
+
+  const externalReference = `tm_${randomUUID()}`
+  const amount = Number(plan.price ?? 0)
+  const preference = await createMercadoPagoPreference({
+    title: `TravelMatch ${plan.name}`,
+    amount,
+    externalReference,
+    metadata: {
+      agencyId,
+      productType: "subscription",
+      planSlug,
+    },
+  })
+
+  const { error: intentError } = await supabase
+    .from("payment_intents")
+    .insert({
+      ...createCheckoutIntentPayload({
+        provider: "mercado_pago",
+        agencyId,
+        productType: "subscription",
+        referenceId: plan.id as string,
+        amount,
+      }),
+      external_reference: externalReference,
+      checkout_url: preference.checkoutUrl,
+      provider_preference_id: preference.preferenceId,
+      provider_payload: {
+        planSlug,
+        preference: preference.payload,
+      },
+    })
+
+  if (intentError) {
+    throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
+  }
+
+  redirect(preference.checkoutUrl)
+}
+
+export async function checkoutPromotion(type: PromotionType) {
+  const { supabase, agencyId } = await requireAgency()
+  const product = promotionProducts[type]
+  const externalReference = `tm_${randomUUID()}`
+  const preference = await createMercadoPagoPreference({
+    title: product.title,
+    amount: product.amount,
+    externalReference,
+    metadata: {
+      agencyId,
+      productType: "promotion",
+      promotionType: type,
+    },
+  })
+
+  const { error: intentError } = await supabase
+    .from("payment_intents")
+    .insert({
+      ...createCheckoutIntentPayload({
+        provider: "mercado_pago",
+        agencyId,
+        productType: "promotion",
+        referenceId: null,
+        amount: product.amount,
+      }),
+      external_reference: externalReference,
+      checkout_url: preference.checkoutUrl,
+      provider_preference_id: preference.preferenceId,
+      provider_payload: {
+        promotionType: type,
+        days: product.days,
+        preference: preference.payload,
+      },
+    })
+
+  if (intentError) {
+    throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
+  }
+
+  redirect(preference.checkoutUrl)
+}

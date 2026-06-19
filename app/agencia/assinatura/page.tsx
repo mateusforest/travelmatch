@@ -1,7 +1,15 @@
 import { Check, CreditCard, Sparkles } from "lucide-react"
+import { checkoutPromotion, checkoutSubscription } from "@/app/actions/billing"
 import { Button } from "@/components/ui/button"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { getAgencyBillingData } from "@/lib/data/billing"
+
+const promotionOptions = [
+  { type: "featured_7", title: "Destaque 7 dias", price: "R$ 97" },
+  { type: "featured_15", title: "Destaque 15 dias", price: "R$ 197" },
+  { type: "featured_30", title: "Destaque 30 dias", price: "R$ 497" },
+  { type: "boost", title: "TravelMatch Boost", price: "R$ 987" },
+] as const
 
 export default async function AssinaturaPage() {
   const billing = await getAgencyBillingData()
@@ -29,9 +37,15 @@ export default async function AssinaturaPage() {
               </p>
             </div>
           </div>
-          <Button className="rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90">
-            Fazer upgrade
-          </Button>
+          <form action={checkoutSubscription.bind(null, billing.planSlug === "premium" ? "premium" : "pro")}>
+            <Button
+              type="submit"
+              className="rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
+              disabled={billing.planSlug === "premium"}
+            >
+              Fazer upgrade
+            </Button>
+          </form>
         </div>
       </SectionCard>
 
@@ -65,17 +79,30 @@ export default async function AssinaturaPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              variant={plan.slug === "pro" ? "default" : "outline"}
-              className={`mt-6 w-full rounded-full ${
-                plan.slug === "pro"
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "border-border hover:border-primary/40"
-              }`}
-              disabled={plan.current}
-            >
-              {plan.current ? "Plano atual" : "Selecionar"}
-            </Button>
+            {plan.slug === "free" ? (
+              <Button
+                variant="outline"
+                className="mt-6 w-full rounded-full border-border hover:border-primary/40"
+                disabled
+              >
+                {plan.current ? "Plano atual" : "Incluido"}
+              </Button>
+            ) : (
+              <form action={checkoutSubscription.bind(null, plan.slug as "pro" | "premium")}>
+                <Button
+                  type="submit"
+                  variant={plan.slug === "pro" ? "default" : "outline"}
+                  className={`mt-6 w-full rounded-full ${
+                    plan.slug === "pro"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                  disabled={plan.current}
+                >
+                  {plan.current ? "Plano atual" : "Selecionar"}
+                </Button>
+              </form>
+            )}
           </div>
         ))}
       </div>
@@ -85,9 +112,79 @@ export default async function AssinaturaPage() {
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-secondary">
             <CreditCard className="h-5 w-5" />
           </span>
-          Checkout preparado para Stripe e Mercado Pago. A finalizacao entra na Etapa 11.
+          Checkout Mercado Pago ativo para planos e produtos patrocinados.
         </div>
       </SectionCard>
+
+      <SectionCard title="Produtos patrocinados" className="mt-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {promotionOptions.map((option) => (
+            <form
+              key={option.type}
+              action={checkoutPromotion.bind(null, option.type)}
+              className="rounded-xl border border-border bg-secondary/20 p-4"
+            >
+              <p className="text-sm font-semibold text-foreground">{option.title}</p>
+              <p className="mt-1 text-lg font-bold text-foreground">{option.price}</p>
+              <Button
+                type="submit"
+                variant="outline"
+                className="mt-4 w-full rounded-full border-border hover:border-primary/40"
+              >
+                Comprar
+              </Button>
+            </form>
+          ))}
+        </div>
+      </SectionCard>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SectionCard title="Pagamentos recentes">
+          {billing.payments.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
+              Nenhum pagamento registrado ainda.
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {billing.payments.map((payment, i) => (
+                <li
+                  key={`${payment.product}-${i}`}
+                  className="flex items-center justify-between gap-3 border-b border-border py-3 text-sm last:border-0 last:pb-0 first:pt-0"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{payment.product}</p>
+                    <p className="text-xs text-muted-foreground">{payment.createdAt} · {payment.status}</p>
+                  </div>
+                  <span className="font-semibold text-foreground">{payment.amount}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Promocoes">
+          {billing.promotions.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
+              Nenhuma promocao ativa ou comprada ainda.
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {billing.promotions.map((promotion, i) => (
+                <li
+                  key={`${promotion.type}-${i}`}
+                  className="flex items-center justify-between gap-3 border-b border-border py-3 text-sm last:border-0 last:pb-0 first:pt-0"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{promotion.type}</p>
+                    <p className="text-xs text-muted-foreground">{promotion.period} · {promotion.status}</p>
+                  </div>
+                  <span className="font-semibold text-foreground">{promotion.amount}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+      </div>
     </>
   )
 }

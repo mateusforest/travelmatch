@@ -28,6 +28,6 @@ export const paymentProviders = {
   },
   mercado_pago: {
     name: "Mercado Pago",
-    checkoutReady: false,
+    checkoutReady: true,
   },
 } as const
