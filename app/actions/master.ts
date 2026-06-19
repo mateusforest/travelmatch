@@ -23,15 +23,42 @@ async function requireMasterClient() {
     return { supabase, ok: false, message: "Acesso master necessário." }
   }
 
-  return { supabase, ok: true, message: null }
+  return { supabase, ok: true, message: null, masterUserId: data.id as string }
+}
+
+async function logMasterAction(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  input: {
+    masterUserId?: string | null
+    action: string
+    entityType: string
+    entityId?: string | null
+    oldData?: unknown
+    newData?: unknown
+  },
+) {
+  await supabase.from("master_audit_logs").insert({
+    master_user_id: input.masterUserId ?? null,
+    action: input.action,
+    entity_type: input.entityType,
+    entity_id: input.entityId ?? null,
+    old_data: input.oldData ?? null,
+    new_data: input.newData ?? null,
+  })
 }
 
 export async function setAgencyStatus(agencyId: string, status: "active" | "suspended") {
-  const { supabase, ok, message } = await requireMasterClient()
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
 
   if (!ok) {
     return { ok: false, message }
   }
+
+  const { data: oldData } = await supabase
+    .from("agency_profiles")
+    .select("id,status")
+    .eq("id", agencyId)
+    .maybeSingle()
 
   const { error } = await supabase
     .from("agency_profiles")
@@ -42,17 +69,32 @@ export async function setAgencyStatus(agencyId: string, status: "active" | "susp
     return { ok: false, message: error.message }
   }
 
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: status === "active" ? "agency_approved" : "agency_suspended",
+    entityType: "agency",
+    entityId: agencyId,
+    oldData,
+    newData: { status },
+  })
+
   revalidatePath("/master")
   revalidatePath("/master/agencias")
   return { ok: true }
 }
 
 export async function setPackageFeatured(packageId: string, featured: boolean) {
-  const { supabase, ok, message } = await requireMasterClient()
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
 
   if (!ok) {
     return { ok: false, message }
   }
+
+  const { data: oldData } = await supabase
+    .from("packages")
+    .select("id,featured")
+    .eq("id", packageId)
+    .maybeSingle()
 
   const { error } = await supabase
     .from("packages")
@@ -63,17 +105,32 @@ export async function setPackageFeatured(packageId: string, featured: boolean) {
     return { ok: false, message: error.message }
   }
 
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: featured ? "package_featured" : "package_unfeatured",
+    entityType: "package",
+    entityId: packageId,
+    oldData,
+    newData: { featured },
+  })
+
   revalidatePath("/master")
   revalidatePath("/master/pacotes")
   return { ok: true }
 }
 
 export async function setMasterPackageStatus(packageId: string, status: "draft" | "published") {
-  const { supabase, ok, message } = await requireMasterClient()
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
 
   if (!ok) {
     return { ok: false, message }
   }
+
+  const { data: oldData } = await supabase
+    .from("packages")
+    .select("id,status")
+    .eq("id", packageId)
+    .maybeSingle()
 
   const { error } = await supabase
     .from("packages")
@@ -83,6 +140,15 @@ export async function setMasterPackageStatus(packageId: string, status: "draft" 
   if (error) {
     return { ok: false, message: error.message }
   }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: status === "published" ? "package_approved" : "package_hidden",
+    entityType: "package",
+    entityId: packageId,
+    oldData,
+    newData: { status },
+  })
 
   revalidatePath("/master")
   revalidatePath("/master/pacotes")
@@ -96,9 +162,11 @@ export async function updateAgencyFeatureSettings(
     hidden?: boolean
     manual_order?: number | null
     editorial_label?: string | null
+    starts_at?: string | null
+    ends_at?: string | null
   },
 ) {
-  const { supabase, ok, message } = await requireMasterClient()
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
 
   if (!ok) {
     return { ok: false, message }
@@ -106,7 +174,7 @@ export async function updateAgencyFeatureSettings(
 
   const { data: existing } = await supabase
     .from("agency_feature_settings")
-    .select("pinned,hidden,manual_order,editorial_label")
+    .select("pinned,hidden,manual_order,editorial_label,starts_at,ends_at")
     .eq("agency_id", agencyId)
     .maybeSingle()
 
@@ -124,6 +192,14 @@ export async function updateAgencyFeatureSettings(
       typeof input.editorial_label === "undefined"
         ? existing?.editorial_label ?? null
         : input.editorial_label?.trim() || null,
+    starts_at:
+      typeof input.starts_at === "undefined"
+        ? existing?.starts_at ?? null
+        : input.starts_at || null,
+    ends_at:
+      typeof input.ends_at === "undefined"
+        ? existing?.ends_at ?? null
+        : input.ends_at || null,
   }
 
   const { error } = await supabase
@@ -133,6 +209,33 @@ export async function updateAgencyFeatureSettings(
   if (error) {
     return { ok: false, message: error.message }
   }
+
+  const changedActions = [
+    typeof input.pinned !== "undefined"
+      ? input.pinned
+        ? "agency_feature_pinned"
+        : "agency_feature_unpinned"
+      : null,
+    typeof input.hidden !== "undefined"
+      ? input.hidden
+        ? "agency_feature_hidden"
+        : "agency_feature_shown"
+      : null,
+    typeof input.manual_order !== "undefined" ? "agency_feature_order_updated" : null,
+    typeof input.editorial_label !== "undefined" ? "agency_feature_label_updated" : null,
+    typeof input.starts_at !== "undefined" || typeof input.ends_at !== "undefined"
+      ? "agency_feature_period_updated"
+      : null,
+  ].filter(Boolean) as string[]
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: changedActions.join(",") || "agency_feature_settings_updated",
+    entityType: "agency",
+    entityId: agencyId,
+    oldData: existing,
+    newData: payload,
+  })
 
   revalidatePath("/")
   revalidatePath("/master/agencias")

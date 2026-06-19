@@ -199,6 +199,8 @@ export function MasterAgenciasClient({ agencies }: { agencies: MasterAgency[] })
 function FeatureControls({ agency }: { agency: MasterAgency }) {
   const [order, setOrder] = useState(agency.featureManualOrder?.toString() ?? "")
   const [label, setLabel] = useState(agency.featureEditorialLabel)
+  const [startsAt, setStartsAt] = useState(toDatetimeLocal(agency.featureStartsAt))
+  const [endsAt, setEndsAt] = useState(toDatetimeLocal(agency.featureEndsAt))
   const [pending, startTransition] = useTransition()
 
   const save = (input: Parameters<typeof updateAgencyFeatureSettings>[1]) => {
@@ -228,6 +230,28 @@ function FeatureControls({ agency }: { agency: MasterAgency }) {
           placeholder="Label editorial"
           className="h-9 rounded-lg text-xs"
         />
+      </div>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Input
+          value={startsAt}
+          onChange={(event) => setStartsAt(event.target.value)}
+          type="datetime-local"
+          className="h-9 rounded-lg text-xs"
+        />
+        <Input
+          value={endsAt}
+          onChange={(event) => setEndsAt(event.target.value)}
+          type="datetime-local"
+          className="h-9 rounded-lg text-xs"
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+        {agency.scoreBreakdown.map((item) => (
+          <div key={item.label} className="flex justify-between gap-2 rounded-md bg-secondary/40 px-2 py-1">
+            <span>{item.label}</span>
+            <span className="font-medium text-foreground">{item.value}</span>
+          </div>
+        ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
@@ -259,6 +283,8 @@ function FeatureControls({ agency }: { agency: MasterAgency }) {
             save({
               manual_order: order ? Number(order) : null,
               editorial_label: label,
+              starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+              ends_at: endsAt ? new Date(endsAt).toISOString() : null,
             })
           }
         >
@@ -267,4 +293,11 @@ function FeatureControls({ agency }: { agency: MasterAgency }) {
       </div>
     </div>
   )
+}
+
+function toDatetimeLocal(value: string) {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return date.toISOString().slice(0, 16)
 }

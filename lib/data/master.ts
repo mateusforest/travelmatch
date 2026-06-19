@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
-import { calculateAgencyFeatureScore } from "@/lib/data/agency-feature-score"
+import { calculateAgencyFeatureScoreBreakdown } from "@/lib/data/agency-feature-score"
 
 type MasterAgencyRow = {
   id: string
@@ -23,6 +23,8 @@ type MasterAgencyRow = {
     hidden: boolean
     manual_order: number | null
     editorial_label: string | null
+    starts_at: string | null
+    ends_at: string | null
   }[] | null
 }
 
@@ -44,6 +46,14 @@ type MasterLeadRow = {
   status: string
   agency_profiles: { agency_name: string }[] | null
   packages: { title: string }[] | null
+}
+
+type MasterAuditLogRow = {
+  id: string
+  action: string
+  entity_type: string
+  entity_id: string | null
+  created_at: string
 }
 
 export type MasterOverviewData = {
@@ -71,6 +81,12 @@ export type MasterAgency = {
   featureHidden: boolean
   featureManualOrder: number | null
   featureEditorialLabel: string
+  featureStartsAt: string
+  featureEndsAt: string
+  scoreBreakdown: {
+    label: string
+    value: number
+  }[]
 }
 
 export type MasterPackage = {
@@ -94,6 +110,14 @@ export type MasterLeadFunnelData = {
   leadsByStatus: { name: string; value: string }[]
   leadsByAgency: { name: string; value: string }[]
   leadsByPackage: { name: string; value: string }[]
+}
+
+export type MasterAuditLog = {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  createdAt: string
 }
 
 async function requireMaster() {
@@ -200,7 +224,7 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("agency_profiles")
-    .select("id,slug,agency_name,city,state,description,status,plan,packages(status,package_views(count)),traveler_leads(status),agency_profile_views(count),cta_events(count),agency_feature_settings(pinned,hidden,manual_order,editorial_label)")
+    .select("id,slug,agency_name,city,state,description,status,plan,packages(status,package_views(count)),traveler_leads(status),agency_profile_views(count),cta_events(count),agency_feature_settings(pinned,hidden,manual_order,editorial_label,starts_at,ends_at)")
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -216,6 +240,18 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
     const leads = agency.traveler_leads ?? []
     const wonLeads = leads.filter((lead) => lead.status === "won" || lead.status === "converted").length
     const settings = agency.agency_feature_settings?.[0]
+    const scoreBreakdown = calculateAgencyFeatureScoreBreakdown({
+      status: agency.status,
+      city: agency.city,
+      state: agency.state,
+      description: agency.description,
+      publishedPackages: publishedPackages.length,
+      profileViews: agency.agency_profile_views?.[0]?.count ?? 0,
+      packageViews,
+      leads: leads.length,
+      wonLeads,
+      ctaEvents: agency.cta_events?.[0]?.count ?? 0,
+    })
 
     return {
     id: agency.id,
@@ -227,22 +263,22 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
     status: agency.status,
     packages: publishedPackages.length,
     leads: leads.length,
-    score: calculateAgencyFeatureScore({
-      status: agency.status,
-      city: agency.city,
-      state: agency.state,
-      description: agency.description,
-      publishedPackages: publishedPackages.length,
-      profileViews: agency.agency_profile_views?.[0]?.count ?? 0,
-      packageViews,
-      leads: leads.length,
-      wonLeads,
-      ctaEvents: agency.cta_events?.[0]?.count ?? 0,
-    }),
+    score: scoreBreakdown.totalScore,
     featurePinned: settings?.pinned ?? false,
     featureHidden: settings?.hidden ?? false,
     featureManualOrder: settings?.manual_order ?? null,
     featureEditorialLabel: settings?.editorial_label ?? "",
+    featureStartsAt: settings?.starts_at ?? "",
+    featureEndsAt: settings?.ends_at ?? "",
+    scoreBreakdown: [
+      { label: "Perfil", value: scoreBreakdown.completenessScore },
+      { label: "Views perfil", value: scoreBreakdown.profileViewsScore },
+      { label: "Views pacotes", value: scoreBreakdown.packageViewsScore },
+      { label: "Leads", value: scoreBreakdown.leadsScore },
+      { label: "Conversao", value: scoreBreakdown.conversionScore },
+      { label: "CTA", value: scoreBreakdown.ctaEventsScore },
+      { label: "Pacotes", value: scoreBreakdown.publishedPackagesScore },
+    ],
     }
   })
 }
@@ -340,4 +376,31 @@ export async function getMasterLeadFunnelData(): Promise<MasterLeadFunnelData> {
     leadsByAgency: countBy(rows.map((lead) => lead.agency_profiles?.[0]?.agency_name ?? "Sem agencia")),
     leadsByPackage: countBy(rows.map((lead) => lead.packages?.[0]?.title ?? "Sem pacote")),
   }
+}
+
+export async function getMasterAuditLogs(limit = 8): Promise<MasterAuditLog[]> {
+  const isMaster = await requireMaster()
+
+  if (!isMaster) {
+    return []
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from("master_audit_logs")
+    .select("id,action,entity_type,entity_id,created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    return []
+  }
+
+  return ((data ?? []) as MasterAuditLogRow[]).map((log) => ({
+    id: log.id,
+    action: log.action,
+    entityType: log.entity_type,
+    entityId: log.entity_id ?? "sem entidade",
+    createdAt: new Date(log.created_at).toLocaleDateString("pt-BR"),
+  }))
 }
