@@ -11,6 +11,7 @@ import { ResultsSection } from "@/components/travelpro/results-section"
 import { SpecialistsSection } from "@/components/travelpro/specialists-section"
 import { registerMatchSearch } from "@/app/actions/public"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
+import type { FeaturedAgency } from "@/lib/data/featured-agencies"
 
 const fade = {
   initial: { opacity: 0, y: 24 },
@@ -19,7 +20,7 @@ const fade = {
   transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
 }
 
-export function HomeExperience() {
+export function HomeExperience({ featuredAgencies }: { featuredAgencies: FeaturedAgency[] }) {
   const [query, setQuery] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
 
@@ -54,13 +55,13 @@ export function HomeExperience() {
           <motion.div key="results" {...fade}>
             <ResultsSection query={query} />
             <SpecialistsSection />
-            <FeaturedAgenciesStrip />
+            <FeaturedAgenciesStrip agencies={featuredAgencies} />
           </motion.div>
         ) : (
           <motion.div key="discovery" {...fade}>
             <CategoriesSection />
             <AgenciesSection />
-            <FeaturedAgenciesStrip />
+            <FeaturedAgenciesStrip agencies={featuredAgencies} />
             <BenefitsSection />
           </motion.div>
         )}

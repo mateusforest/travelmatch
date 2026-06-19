@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
+import { calculateAgencyFeatureScore } from "@/lib/data/agency-feature-score"
 
 type MasterAgencyRow = {
   id: string
@@ -10,8 +11,19 @@ type MasterAgencyRow = {
   description: string | null
   status: string
   plan: string
-  packages?: { count: number }[]
-  traveler_leads?: { count: number }[]
+  packages?: {
+    status?: string
+    package_views?: { count: number }[]
+  }[]
+  traveler_leads?: { status: string }[]
+  agency_profile_views?: { count: number }[]
+  cta_events?: { count: number }[]
+  agency_feature_settings?: {
+    pinned: boolean
+    hidden: boolean
+    manual_order: number | null
+    editorial_label: string | null
+  }[] | null
 }
 
 type MasterPackageRow = {
@@ -55,6 +67,10 @@ export type MasterAgency = {
   packages: number
   leads: number
   score: number
+  featurePinned: boolean
+  featureHidden: boolean
+  featureManualOrder: number | null
+  featureEditorialLabel: string
 }
 
 export type MasterPackage = {
@@ -184,14 +200,24 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("agency_profiles")
-    .select("id,slug,agency_name,city,state,description,status,plan,packages(count),traveler_leads(count)")
+    .select("id,slug,agency_name,city,state,description,status,plan,packages(status,package_views(count)),traveler_leads(status),agency_profile_views(count),cta_events(count),agency_feature_settings(pinned,hidden,manual_order,editorial_label)")
     .order("created_at", { ascending: false })
 
   if (error) {
     throw new Error(error.message)
   }
 
-  return ((data ?? []) as MasterAgencyRow[]).map((agency) => ({
+  return ((data ?? []) as MasterAgencyRow[]).map((agency) => {
+    const publishedPackages = (agency.packages ?? []).filter((pkg) => pkg.status === "published")
+    const packageViews = publishedPackages.reduce(
+      (total, pkg) => total + (pkg.package_views?.[0]?.count ?? 0),
+      0,
+    )
+    const leads = agency.traveler_leads ?? []
+    const wonLeads = leads.filter((lead) => lead.status === "won" || lead.status === "converted").length
+    const settings = agency.agency_feature_settings?.[0]
+
+    return {
     id: agency.id,
     slug: agency.slug,
     name: agency.agency_name,
@@ -199,10 +225,26 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
     specialty: agency.description || "Perfil em construção",
     plan: agency.plan === "performance" ? "Performance" : "Essencial",
     status: agency.status,
-    packages: agency.packages?.[0]?.count ?? 0,
-    leads: agency.traveler_leads?.[0]?.count ?? 0,
-    score: 0,
-  }))
+    packages: publishedPackages.length,
+    leads: leads.length,
+    score: calculateAgencyFeatureScore({
+      status: agency.status,
+      city: agency.city,
+      state: agency.state,
+      description: agency.description,
+      publishedPackages: publishedPackages.length,
+      profileViews: agency.agency_profile_views?.[0]?.count ?? 0,
+      packageViews,
+      leads: leads.length,
+      wonLeads,
+      ctaEvents: agency.cta_events?.[0]?.count ?? 0,
+    }),
+    featurePinned: settings?.pinned ?? false,
+    featureHidden: settings?.hidden ?? false,
+    featureManualOrder: settings?.manual_order ?? null,
+    featureEditorialLabel: settings?.editorial_label ?? "",
+    }
+  })
 }
 
 export async function getMasterPackages(): Promise<MasterPackage[]> {

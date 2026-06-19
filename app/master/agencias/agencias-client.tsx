@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { MasterAgency } from "@/lib/data/master"
-import { setAgencyStatus } from "@/app/actions/master"
+import { setAgencyStatus, updateAgencyFeatureSettings } from "@/app/actions/master"
 
 const plans = ["Todos os planos", "Essencial", "Performance"]
 
@@ -186,10 +186,85 @@ export function MasterAgenciasClient({ agencies }: { agencies: MasterAgency[] })
                 </div>
                 <HealthScoreBadge score={a.score} />
               </div>
+
+              <FeatureControls agency={a} />
             </div>
           ))}
         </div>
       )}
     </>
+  )
+}
+
+function FeatureControls({ agency }: { agency: MasterAgency }) {
+  const [order, setOrder] = useState(agency.featureManualOrder?.toString() ?? "")
+  const [label, setLabel] = useState(agency.featureEditorialLabel)
+  const [pending, startTransition] = useTransition()
+
+  const save = (input: Parameters<typeof updateAgencyFeatureSettings>[1]) => {
+    startTransition(() => {
+      void updateAgencyFeatureSettings(agency.id, input)
+    })
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-background/60 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>{agency.featurePinned ? "Fixada" : "Auto"}</span>
+        <span>{agency.featureHidden ? "Oculta" : "Visivel"}</span>
+        <span>Score destaque: {agency.score}</span>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Input
+          value={order}
+          onChange={(event) => setOrder(event.target.value)}
+          placeholder="Ordem"
+          type="number"
+          className="h-9 rounded-lg text-xs"
+        />
+        <Input
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          placeholder="Label editorial"
+          className="h-9 rounded-lg text-xs"
+        />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          className="h-8 rounded-full text-xs"
+          onClick={() => save({ pinned: !agency.featurePinned })}
+        >
+          {agency.featurePinned ? "Remover fixacao" : "Fixar destaque"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          className="h-8 rounded-full text-xs"
+          onClick={() => save({ hidden: !agency.featureHidden })}
+        >
+          {agency.featureHidden ? "Reexibir" : "Ocultar"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending}
+          className="h-8 rounded-full text-xs"
+          onClick={() =>
+            save({
+              manual_order: order ? Number(order) : null,
+              editorial_label: label,
+            })
+          }
+        >
+          Salvar destaque
+        </Button>
+      </div>
+    </div>
   )
 }

@@ -2,11 +2,14 @@
 
 import { Star, ChevronRight } from "lucide-react"
 import { motion } from "framer-motion"
+import type { FeaturedAgency } from "@/lib/data/featured-agencies"
 
 // Plataforma 0km: sem mocks. As agências em destaque virão dos cadastros reais.
-const agencies: { name: string; rating: string }[] = []
+type FeaturedAgenciesStripProps = {
+  agencies: FeaturedAgency[]
+}
 
-export function FeaturedAgenciesStrip() {
+export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) {
   return (
     <section className="py-16 md:py-20">
       <div className="container mx-auto px-4 lg:px-8">
