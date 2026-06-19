@@ -20,17 +20,17 @@ export default async function AnalyticsPage({
   const { period, from, to } = await searchParams
   const analytics = await getAgencyAnalyticsData(period, from, to)
   const stats = [
-    { icon: Eye, label: "VisualizaÃ§Ãµes", value: String(analytics.stats.views), hint: "total" },
+    { icon: Eye, label: "Visualizações", value: String(analytics.stats.views), hint: "total" },
     { icon: MousePointerClick, label: "Cliques", value: String(analytics.stats.clicks), hint: "eventos CTA" },
     { icon: Inbox, label: "Leads", value: String(analytics.stats.leads), hint: "total" },
-    { icon: TrendingUp, label: "ConversÃµes", value: String(analytics.stats.conversions), hint: "ganhos" },
+    { icon: TrendingUp, label: "Conversões", value: String(analytics.stats.conversions), hint: "ganhos" },
   ]
 
   return (
     <>
       <PageHeader
         title="Analytics"
-        description="Entenda como sua agÃªncia estÃ¡ performando no TravelMatch."
+        description="Entenda como sua agência está performando no TravelMatch."
         action={
           <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1">
             {analyticsPeriods.map((item) => (

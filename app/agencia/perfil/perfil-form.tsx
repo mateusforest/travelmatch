@@ -103,7 +103,7 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
       setBannerUrl(result.url)
       setSaved(true)
     } else {
-      setError(result.message ?? "NÃ£o foi possÃ­vel enviar o banner.")
+      setError(result.message ?? "Não foi possível enviar o banner.")
     }
   }
 

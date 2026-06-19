@@ -160,7 +160,7 @@ export function ResultsSection({ query }: { query?: string }) {
           slug: pkg.slug,
           image: pkg.image_url || "/placeholder.jpg",
           destination: pkg.destination,
-          agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "AgÃªncia",
+          agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "Agência",
           agencyId: pkg.agency_id,
           categorySlug: firstRelation(pkg.travel_categories)?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
@@ -236,11 +236,11 @@ export function ResultsSection({ query }: { query?: string }) {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 text-balance">
-            Pacotes mais compatÃ­veis com{" "}
-            <span className="text-primary">vocÃª</span>.
+            Pacotes mais compatíveis com{" "}
+            <span className="text-primary">você</span>.
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            OpÃ§Ãµes selecionadas a partir do seu perfil e dos especialistas
+            Opções selecionadas a partir do seu perfil e dos especialistas
             recomendados.
           </p>
         </motion.div>
@@ -254,8 +254,8 @@ export function ResultsSection({ query }: { query?: string }) {
               Em breve, pacotes para o seu perfil
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Assim que as agÃªncias publicarem seus pacotes, as melhores opÃ§Ãµes
-              compatÃ­veis com a sua busca aparecerÃ£o aqui.
+              Assim que as agências publicarem seus pacotes, as melhores opções
+              compatíveis com a sua busca aparecerão aqui.
             </p>
           </div>
         ) : (
@@ -367,7 +367,7 @@ export function ResultsSection({ query }: { query?: string }) {
             size="lg"
             className="rounded-full px-8 border-border hover:border-primary/50 hover:bg-primary/5"
           >
-            Ver mais opÃ§Ãµes
+            Ver mais opções
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </motion.div>

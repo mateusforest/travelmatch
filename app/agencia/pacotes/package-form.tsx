@@ -30,10 +30,10 @@ import { removePackageGalleryImage, uploadPackageDraftImage, uploadPackageImage 
 import { destinationSuggestions } from "@/lib/travel-suggestions"
 
 const steps = [
-  { n: 1, title: "InformaÃ§Ãµes bÃ¡sicas" },
-  { n: 2, title: "DescriÃ§Ã£o" },
+  { n: 1, title: "Informações básicas" },
+  { n: 2, title: "Descrição" },
   { n: 3, title: "Galeria" },
-  { n: 4, title: "PublicaÃ§Ã£o" },
+  { n: 4, title: "Publicação" },
 ]
 
 type Category = {
@@ -209,10 +209,10 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
         {step === 1 && (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Label htmlFor="title">TÃ­tulo do pacote</Label>
+              <Label htmlFor="title">Título do pacote</Label>
               <Input
                 id="title"
-                placeholder="Ex: Disney em famÃ­lia - 7 dias"
+                placeholder="Ex: Disney em família - 7 dias"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="mt-1.5"
@@ -251,7 +251,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="price">PreÃ§o a partir de</Label>
+              <Label htmlFor="price">Preço a partir de</Label>
               <Input
                 id="price"
                 placeholder="R$ 0,00"
@@ -263,7 +263,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               />
             </div>
             <div>
-              <Label htmlFor="duration">DuraÃ§Ã£o</Label>
+              <Label htmlFor="duration">Duração</Label>
               <Input
                 id="duration"
                 placeholder="Ex: 7 dias"
@@ -280,7 +280,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
         {step === 2 && (
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <Label htmlFor="description">DescriÃ§Ã£o do pacote</Label>
+              <Label htmlFor="description">Descrição do pacote</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -297,11 +297,11 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva a experiÃªncia, roteiro, diferenciais e o que estÃ¡ incluÃ­do..."
+              placeholder="Descreva a experiência, roteiro, diferenciais e o que está incluído..."
               className="min-h-44 resize-none"
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Use o COS para gerar uma descriÃ§Ã£o persuasiva e ajuste como
+              Use o COS para gerar uma descrição persuasiva e ajuste como
               preferir.
             </p>
           </div>
@@ -321,7 +321,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
                 Arraste imagens ou clique para enviar
               </span>
               <span className="mt-1 text-xs text-muted-foreground">
-                PNG, JPG atÃ© 10MB cada
+                PNG, JPG até 10MB cada
               </span>
               <input
                 id="gallery"
@@ -370,8 +370,8 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               Tudo pronto para publicar
             </h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Ao publicar, seu pacote ficarÃ¡ visÃ­vel para viajantes compatÃ­veis
-              atravÃ©s do Match inteligente. VocÃª tambÃ©m pode salvar como
+              Ao publicar, seu pacote ficará visível para viajantes compatíveis
+              através do Match inteligente. Você também pode salvar como
               rascunho.
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

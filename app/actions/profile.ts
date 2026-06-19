@@ -99,7 +99,7 @@ export async function uploadAgencyBanner(formData: FormData) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false, message: "SessÃ£o expirada. FaÃ§a login novamente." }
+    return { ok: false, message: "Sessão expirada. Faça login novamente." }
   }
 
   if (!(file instanceof File) || file.size === 0) {

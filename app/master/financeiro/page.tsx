@@ -22,7 +22,7 @@ export default async function MasterFinanceiroPage() {
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Financeiro"
-        description="Receita e saÃºde financeira da plataforma."
+        description="Receita e saúde financeira da plataforma."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -38,10 +38,10 @@ export default async function MasterFinanceiroPage() {
           </SectionCard>
         </div>
         <div className="lg:col-span-3">
-          <SectionCard title="HistÃ³rico recente">
+          <SectionCard title="Histórico recente">
             {finance.history.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
-                Nenhuma transaÃ§Ã£o registrada ainda.
+                Nenhuma transação registrada ainda.
               </p>
             ) : (
               <ul className="flex flex-col">

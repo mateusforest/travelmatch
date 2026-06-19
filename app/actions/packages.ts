@@ -337,7 +337,7 @@ export async function uploadPackageDraftImage(formData: FormData) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false, message: "SessÃ£o expirada. FaÃ§a login novamente." }
+    return { ok: false, message: "Sessão expirada. Faça login novamente." }
   }
 
   const ext = file.name.split(".").pop() || "png"

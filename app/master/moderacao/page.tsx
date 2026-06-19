@@ -22,8 +22,8 @@ export default async function MasterModeracaoPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="ModeraÃ§Ã£o"
-        description="Centro de qualidade e aprovaÃ§Ã£o da plataforma."
+        title="Moderação"
+        description="Centro de qualidade e aprovação da plataforma."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

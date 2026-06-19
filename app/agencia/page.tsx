@@ -17,24 +17,24 @@ import {
 } from "@/components/agencia/ui-bits"
 import { getAgencyDashboardData } from "@/lib/data/agency"
 
-// SugestÃµes do COS (assistente operacional) â€” conteÃºdo de produto, gerado em tempo real.
-// Plataforma 0km: sem mocks. As recomendaÃ§Ãµes surgirÃ£o conforme houver dados da agÃªncia.
+// Sugestões do COS (assistente operacional) — conteúdo de produto, gerado em tempo real.
+// Plataforma 0km: sem mocks. As recomendações surgirão conforme houver dados da agência.
 const cosSuggestions: string[] = []
 
 export default async function AgenciaDashboardPage() {
   const dashboard = await getAgencyDashboardData()
   const stats = [
     { icon: Package, label: "Pacotes ativos", value: String(dashboard.activePackages), hint: "publicados" },
-    { icon: Inbox, label: "Leads recebidos", value: String(dashboard.leadsLast30Days), hint: "Ãºltimos 30 dias" },
-    { icon: Eye, label: "VisualizaÃ§Ãµes", value: String(dashboard.viewsLast30Days), hint: "Ãºltimos 30 dias" },
-    { icon: TrendingUp, label: "Taxa de conversÃ£o", value: dashboard.conversionRate, hint: "mÃ©dia" },
+    { icon: Inbox, label: "Leads recebidos", value: String(dashboard.leadsLast30Days), hint: "últimos 30 dias" },
+    { icon: Eye, label: "Visualizações", value: String(dashboard.viewsLast30Days), hint: "últimos 30 dias" },
+    { icon: TrendingUp, label: "Taxa de conversão", value: dashboard.conversionRate, hint: "média" },
   ]
 
   return (
     <>
       <PageHeader
-        title="VisÃ£o geral"
-        description="Acompanhe a operaÃ§Ã£o da sua agÃªncia em um sÃ³ lugar."
+        title="Visão geral"
+        description="Acompanhe a operação da sua agência em um só lugar."
         action={
           <Button
             asChild
@@ -64,7 +64,7 @@ export default async function AgenciaDashboardPage() {
       {/* Two columns */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SectionCard
-          title="Ãšltimos leads"
+          title="Últimos leads"
           action={
             <Link
               href="/agencia/leads"
@@ -77,7 +77,7 @@ export default async function AgenciaDashboardPage() {
           <EmptyState
             icon={Inbox}
             title="Nenhum lead ainda"
-            description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerÃ£o aqui."
+            description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerão aqui."
           />
         </SectionCard>
 
@@ -139,13 +139,13 @@ export default async function AgenciaDashboardPage() {
             <Sparkles className="h-[18px] w-[18px] text-primary" />
           </span>
           <h2 className="text-base font-semibold text-foreground">
-            SugestÃµes do COS
+            Sugestões do COS
           </h2>
         </div>
         {cosSuggestions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card/70 p-4 text-sm leading-relaxed text-muted-foreground">
-            Conforme sua agÃªncia publicar pacotes e receber leads, o COS trarÃ¡
-            recomendaÃ§Ãµes personalizadas para melhorar sua performance aqui.
+            Conforme sua agência publicar pacotes e receber leads, o COS trará
+            recomendações personalizadas para melhorar sua performance aqui.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
