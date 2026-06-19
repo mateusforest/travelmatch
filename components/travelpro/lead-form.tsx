@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { usePathname } from "next/navigation"
 import { Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +14,8 @@ type LeadFormProps = {
   agencyId?: string | null
   destination?: string | null
   categorySlug?: string | null
+  source?: string | null
+  ctaLabel?: string | null
 }
 
 export function LeadForm({
@@ -20,11 +23,17 @@ export function LeadForm({
   agencyId,
   destination,
   categorySlug,
+  source,
+  ctaLabel = "Enviar interesse",
 }: LeadFormProps) {
+  const pathname = usePathname()
   const [travelerName, setTravelerName] = useState("")
   const [travelerEmail, setTravelerEmail] = useState("")
   const [travelerPhone, setTravelerPhone] = useState("")
   const [desiredDestination, setDesiredDestination] = useState(destination ?? "")
+  const [travelDate, setTravelDate] = useState("")
+  const [travelersCount, setTravelersCount] = useState("")
+  const [budgetRange, setBudgetRange] = useState("")
   const [message, setMessage] = useState("")
   const [feedback, setFeedback] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -41,6 +50,12 @@ export function LeadForm({
         desired_destination: desiredDestination,
         category_slug: categorySlug,
         message,
+        source: source ?? "public_page",
+        source_page: pathname,
+        cta_label: ctaLabel,
+        travel_date: travelDate,
+        travelers_count: travelersCount ? Number(travelersCount) : null,
+        budget_range: budgetRange,
       })
 
       if (result.ok) {
@@ -48,6 +63,9 @@ export function LeadForm({
         setTravelerName("")
         setTravelerEmail("")
         setTravelerPhone("")
+        setTravelDate("")
+        setTravelersCount("")
+        setBudgetRange("")
         setMessage("")
       } else {
         setFeedback(result.message ?? "Não foi possível enviar seu interesse.")
@@ -103,6 +121,37 @@ export function LeadForm({
             onChange={(e) => setDesiredDestination(e.target.value)}
             className="mt-1.5"
           />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <Label htmlFor="lead-travel-date">Data da viagem</Label>
+            <Input
+              id="lead-travel-date"
+              value={travelDate}
+              onChange={(e) => setTravelDate(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="lead-travelers">Viajantes</Label>
+            <Input
+              id="lead-travelers"
+              type="number"
+              min="1"
+              value={travelersCount}
+              onChange={(e) => setTravelersCount(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="lead-budget">Orcamento</Label>
+            <Input
+              id="lead-budget"
+              value={budgetRange}
+              onChange={(e) => setBudgetRange(e.target.value)}
+              className="mt-1.5"
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="lead-message">Mensagem</Label>

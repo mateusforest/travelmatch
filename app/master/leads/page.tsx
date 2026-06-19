@@ -1,26 +1,21 @@
-import { Inbox, CheckCircle2, Percent, Building2, Package, MapPin } from "lucide-react"
+import { Building2, CheckCircle2, Inbox, Package, Percent, Rows3 } from "lucide-react"
 import { PageHeader, SectionCard, StatCard } from "@/components/agencia/ui-bits"
 import { RankingList } from "@/components/master/master-bits"
+import { getMasterLeadFunnelData } from "@/lib/data/master"
 
-// Plataforma 0km: indicadores zerados e rankings vazios até haver dados reais.
-const metrics = [
-  { icon: Inbox, label: "Leads totais", value: "0", hint: "Acumulado da plataforma" },
-  { icon: CheckCircle2, label: "Leads convertidos", value: "0", hint: "Negócios fechados" },
-  { icon: Percent, label: "Taxa média de conversão", value: "—", hint: "Sem dados ainda" },
-]
+export default async function MasterLeadsPage() {
+  const funnel = await getMasterLeadFunnelData()
+  const metrics = [
+    { icon: Inbox, label: "Leads totais", value: String(funnel.totalLeads), hint: "Acumulado da plataforma" },
+    { icon: CheckCircle2, label: "Leads convertidos", value: String(funnel.wonLeads), hint: "Negocios fechados" },
+    { icon: Percent, label: "Taxa media de conversao", value: funnel.conversionRate, hint: "Ganhos/leads" },
+  ]
 
-const topAgencies: { name: string; value: string; meta?: string }[] = []
-
-const topPackages: { name: string; value: string }[] = []
-
-const topDestinations: { name: string; value: string }[] = []
-
-export default function MasterLeadsPage() {
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Leads"
-        description="Visão global da geração de oportunidades no marketplace."
+        description="Visao global da geracao de oportunidades no marketplace."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -31,24 +26,28 @@ export default function MasterLeadsPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <SectionCard
-          title="Agências com mais leads"
+          title="Agencias com mais leads"
           action={<Building2 className="h-4 w-4 text-muted-foreground" />}
         >
-          <RankingList items={topAgencies} />
+          <RankingList items={funnel.leadsByAgency} />
         </SectionCard>
         <SectionCard
           title="Pacotes com mais leads"
           action={<Package className="h-4 w-4 text-muted-foreground" />}
         >
-          <RankingList items={topPackages} />
+          <RankingList items={funnel.leadsByPackage} />
         </SectionCard>
         <SectionCard
-          title="Destinos mais procurados"
-          action={<MapPin className="h-4 w-4 text-muted-foreground" />}
+          title="Leads por status"
+          action={<Rows3 className="h-4 w-4 text-muted-foreground" />}
         >
-          <RankingList items={topDestinations} />
+          <RankingList items={funnel.leadsByStatus} />
         </SectionCard>
       </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Eventos de CTA registrados: {funnel.ctaEventsTotal}
+      </p>
     </div>
   )
 }

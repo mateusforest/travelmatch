@@ -1,10 +1,10 @@
 import Image from "next/image"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Clock, MapPin, Store } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
 import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
+import { TrackedLink } from "@/components/travelpro/tracked-link"
 import { PackageViewTracker } from "@/components/travelpro/view-tracker"
 import { getPublicPackageBySlug } from "@/lib/data/public"
 
@@ -75,12 +75,16 @@ export default async function PublicPackagePage({
                 </p>
               )}
               {pkg.agency_slug && (
-                <Link
+                <TrackedLink
                   href={`/agencias/${pkg.agency_slug}`}
+                  packageId={pkg.id}
+                  agencyId={pkg.agency_id}
+                  eventType="view_agency"
+                  ctaLabel="Ver perfil da agencia"
                   className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
                 >
                   Ver perfil da agência
-                </Link>
+                </TrackedLink>
               )}
             </div>
           </div>
@@ -91,6 +95,8 @@ export default async function PublicPackagePage({
               agencyId={pkg.agency_id}
               destination={pkg.destination}
               categorySlug={pkg.category_slug}
+              source="package_page"
+              ctaLabel="Enviar interesse"
             />
           </div>
         </div>

@@ -12,6 +12,12 @@ type LeadInput = {
   desired_destination?: string | null
   category_slug?: string | null
   message?: string | null
+  source?: string | null
+  source_page?: string | null
+  cta_label?: string | null
+  travel_date?: string | null
+  travelers_count?: number | null
+  budget_range?: string | null
 }
 
 export async function createTravelerLead(input: LeadInput) {
@@ -58,12 +64,26 @@ export async function createTravelerLead(input: LeadInput) {
     desired_destination: input.desired_destination?.trim() || null,
     category_slug: input.category_slug?.trim() || null,
     message: input.message?.trim() || null,
+    source: input.source?.trim() || null,
+    source_page: input.source_page?.trim() || null,
+    cta_label: input.cta_label?.trim() || null,
+    travel_date: input.travel_date?.trim() || null,
+    travelers_count: input.travelers_count || null,
+    budget_range: input.budget_range?.trim() || null,
     status: "new",
   })
 
   if (error) {
     return { ok: false, message: error.message }
   }
+
+  await registerCtaEvent({
+    package_id: input.package_id,
+    agency_id: agencyId,
+    event_type: "lead_submitted",
+    cta_label: input.cta_label ?? "Enviar interesse",
+    source_page: input.source_page,
+  })
 
   return { ok: true }
 }
@@ -118,6 +138,29 @@ export async function registerAgencyProfileView(agencyId: string) {
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.from("agency_profile_views").insert({
     agency_id: agencyId,
+  })
+
+  return { ok: !error }
+}
+
+export async function registerCtaEvent(input: {
+  package_id?: string | null
+  agency_id?: string | null
+  event_type: string
+  cta_label?: string | null
+  source_page?: string | null
+}) {
+  if (!hasSupabaseEnv() || !input.event_type.trim()) {
+    return { ok: false }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.from("cta_events").insert({
+    package_id: input.package_id || null,
+    agency_id: input.agency_id || null,
+    event_type: input.event_type.trim(),
+    cta_label: input.cta_label?.trim() || null,
+    source_page: input.source_page?.trim() || null,
   })
 
   return { ok: !error }

@@ -27,6 +27,13 @@ type MasterPackageRow = {
   package_views?: { count: number }[]
 }
 
+type MasterLeadRow = {
+  id: string
+  status: string
+  agency_profiles: { agency_name: string }[] | null
+  packages: { title: string }[] | null
+}
+
 export type MasterOverviewData = {
   agenciesTotal: number
   activeAgencies: number
@@ -61,6 +68,16 @@ export type MasterPackage = {
   leads: number
   status: string
   featured: boolean
+}
+
+export type MasterLeadFunnelData = {
+  totalLeads: number
+  wonLeads: number
+  conversionRate: string
+  ctaEventsTotal: number
+  leadsByStatus: { name: string; value: string }[]
+  leadsByAgency: { name: string; value: string }[]
+  leadsByPackage: { name: string; value: string }[]
 }
 
 async function requireMaster() {
@@ -217,4 +234,68 @@ export async function getMasterPackages(): Promise<MasterPackage[]> {
     status: pkg.featured ? "Destaque" : pkg.status === "published" ? "Ativo" : "Pendente",
     featured: pkg.featured,
   }))
+}
+
+export async function getMasterLeadFunnelData(): Promise<MasterLeadFunnelData> {
+  const isMaster = await requireMaster()
+
+  if (!isMaster) {
+    return {
+      totalLeads: 0,
+      wonLeads: 0,
+      conversionRate: "0%",
+      ctaEventsTotal: 0,
+      leadsByStatus: [],
+      leadsByAgency: [],
+      leadsByPackage: [],
+    }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const [{ data: leads, error: leadsError }, { count: ctaEventsTotal }] = await Promise.all([
+    supabase
+      .from("traveler_leads")
+      .select("id,status,agency_profiles(agency_name),packages(title)")
+      .order("created_at", { ascending: false }),
+    supabase.from("cta_events").select("id", { count: "exact", head: true }),
+  ])
+
+  if (leadsError) {
+    throw new Error(leadsError.message)
+  }
+
+  const rows = (leads ?? []) as MasterLeadRow[]
+  const totalLeads = rows.length
+  const wonLeads = rows.filter((lead) => lead.status === "won" || lead.status === "converted").length
+
+  const statusLabels: Record<string, string> = {
+    new: "Novos",
+    contacted: "Em atendimento",
+    proposal_sent: "Propostas",
+    won: "Ganhos",
+    converted: "Ganhos",
+    lost: "Perdidos",
+    archived: "Arquivados",
+  }
+
+  const countBy = (items: string[]) => {
+    const counts = new Map<string, number>()
+    for (const item of items) {
+      counts.set(item, (counts.get(item) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value: String(value) }))
+  }
+
+  return {
+    totalLeads,
+    wonLeads,
+    conversionRate: totalLeads > 0 ? `${Math.round((wonLeads / totalLeads) * 100)}%` : "0%",
+    ctaEventsTotal: ctaEventsTotal ?? 0,
+    leadsByStatus: countBy(rows.map((lead) => statusLabels[lead.status] ?? lead.status)),
+    leadsByAgency: countBy(rows.map((lead) => lead.agency_profiles?.[0]?.agency_name ?? "Sem agencia")),
+    leadsByPackage: countBy(rows.map((lead) => lead.packages?.[0]?.title ?? "Sem pacote")),
+  }
 }

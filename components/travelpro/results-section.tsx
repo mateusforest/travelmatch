@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
-import { createTravelerLead } from "@/app/actions/public"
+import { createTravelerLead, registerCtaEvent } from "@/app/actions/public"
 
 type Package = {
   id: string
@@ -27,13 +27,34 @@ type Package = {
 
 type PackageRow = {
   id: string
+  slug: string
+  title: string
   image_url: string | null
   destination: string
+  description: string
   price_from: number | null
   duration_days: number | null
-  agency_profiles: { agency_name: string }[] | null
+  featured: boolean
+  agency_profiles: { agency_name: string; status: string }[] | null
   travel_categories: { name: string; slug: string }[] | null
   agency_id: string | null
+}
+
+function compatibilityScore(pkg: PackageRow, term: string) {
+  if (!term) {
+    return pkg.featured ? 10 : 0
+  }
+
+  const normalizedTerm = term.toLowerCase()
+  let score = pkg.featured ? 20 : 0
+
+  if (pkg.destination.toLowerCase().includes(normalizedTerm)) score += 50
+  if (pkg.title.toLowerCase().includes(normalizedTerm)) score += 35
+  if ((pkg.travel_categories?.[0]?.slug ?? "").toLowerCase().includes(normalizedTerm)) score += 25
+  if ((pkg.travel_categories?.[0]?.name ?? "").toLowerCase().includes(normalizedTerm)) score += 25
+  if (pkg.description.toLowerCase().includes(normalizedTerm)) score += 15
+
+  return score
 }
 
 export function ResultsSection({ query }: { query?: string }) {
@@ -48,14 +69,16 @@ export function ResultsSection({ query }: { query?: string }) {
     const supabase = createSupabaseBrowserClient()
     let request = supabase
       .from("packages")
-      .select("id,slug,agency_id,image_url,destination,price_from,duration_days,agency_profiles(agency_name),travel_categories(name,slug)")
+      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status),travel_categories(name,slug)")
       .eq("status", "published")
+      .order("featured", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(8)
+      .limit(30)
 
     const term = query?.trim()
     if (term) {
-      request = request.or(`destination.ilike.%${term}%,title.ilike.%${term}%`)
+      const safeTerm = term.replace(/[%,()]/g, " ")
+      request = request.or(`destination.ilike.%${safeTerm}%,title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`)
     }
 
     request
@@ -65,9 +88,15 @@ export function ResultsSection({ query }: { query?: string }) {
           return
         }
 
-        const next = ((data ?? []) as PackageRow[]).map((pkg) => ({
+        const activePackages = ((data ?? []) as PackageRow[]).filter(
+          (pkg) => pkg.agency_profiles?.[0]?.status === "active",
+        )
+        const next = activePackages
+          .sort((a, b) => compatibilityScore(b, term ?? "") - compatibilityScore(a, term ?? ""))
+          .slice(0, 8)
+          .map((pkg) => ({
           id: pkg.id,
-          slug: (pkg as PackageRow & { slug: string }).slug,
+          slug: pkg.slug,
           image: pkg.image_url || "/placeholder.jpg",
           destination: pkg.destination,
           agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
@@ -75,7 +104,7 @@ export function ResultsSection({ query }: { query?: string }) {
           categorySlug: pkg.travel_categories?.[0]?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
           duration: pkg.duration_days ? `${pkg.duration_days} dias` : "Sob consulta",
-          match: 0,
+          match: Math.min(compatibilityScore(pkg, term ?? ""), 100),
           tags: [pkg.travel_categories?.[0]?.name].filter(Boolean) as string[],
         }))
         setPackages(next)
@@ -93,6 +122,23 @@ export function ResultsSection({ query }: { query?: string }) {
       desired_destination: pkg.destination,
       category_slug: pkg.categorySlug,
       message,
+      source: "search_results",
+      source_page: query ? `/?busca=${query}` : "/",
+      cta_label: "WhatsApp",
+    })
+  }
+
+  const registerPackageClick = (pkg: Package) => {
+    if (!hasSupabaseEnv()) {
+      return
+    }
+
+    void registerCtaEvent({
+      package_id: pkg.id,
+      agency_id: pkg.agencyId,
+      event_type: "view_package",
+      cta_label: "Detalhes",
+      source_page: query ? `/?busca=${query}` : "/",
     })
   }
 
@@ -203,7 +249,7 @@ export function ResultsSection({ query }: { query?: string }) {
                     >
                       <Link
                         href={`/pacotes/${pkg.slug}`}
-                        onClick={() => registerInterest(pkg, "Solicitou detalhes do pacote")}
+                        onClick={() => registerPackageClick(pkg)}
                       >
                         Detalhes
                         <ChevronRight className="w-4 h-4 ml-1" />

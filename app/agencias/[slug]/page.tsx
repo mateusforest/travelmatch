@@ -1,11 +1,11 @@
 import Image from "next/image"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Globe, Instagram, MapPin, Package } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
 import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
 import { AgencyViewTracker } from "@/components/travelpro/view-tracker"
+import { TrackedLink } from "@/components/travelpro/tracked-link"
 import { getPublicAgencyBySlug } from "@/lib/data/public"
 
 export default async function PublicAgencyPage({
@@ -83,9 +83,13 @@ export default async function PublicAgencyPage({
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {agency.packages.map((pkg) => (
-                    <Link
+                    <TrackedLink
                       key={pkg.id}
                       href={`/pacotes/${pkg.slug}`}
+                      packageId={pkg.id}
+                      agencyId={agency.id}
+                      eventType="view_package"
+                      ctaLabel="Ver pacote"
                       className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03] transition-shadow hover:shadow-md"
                     >
                       <div className="relative aspect-[16/9] bg-secondary">
@@ -103,7 +107,7 @@ export default async function PublicAgencyPage({
                         <h3 className="mt-1 font-semibold text-foreground">{pkg.title}</h3>
                         <p className="mt-3 text-sm font-semibold text-foreground">{pkg.price}</p>
                       </div>
-                    </Link>
+                    </TrackedLink>
                   ))}
                 </div>
               )}
@@ -111,7 +115,7 @@ export default async function PublicAgencyPage({
           </div>
 
           <div>
-            <LeadForm agencyId={agency.id} />
+            <LeadForm agencyId={agency.id} source="agency_page" ctaLabel="Enviar interesse" />
           </div>
         </div>
       </section>
