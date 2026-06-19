@@ -59,7 +59,7 @@ export function HomeExperience({ featuredAgencies }: { featuredAgencies: Feature
           </motion.div>
         ) : (
           <motion.div key="discovery" {...fade}>
-            <CategoriesSection />
+            <CategoriesSection onSearch={handleSearch} />
             <AgenciesSection />
             <FeaturedAgenciesStrip agencies={featuredAgencies} />
             <BenefitsSection />

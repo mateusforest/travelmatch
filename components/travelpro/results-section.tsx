@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
@@ -26,6 +26,8 @@ type Package = {
   tags: string[]
 }
 
+type Relation<T> = T | T[] | null
+
 type PackageRow = {
   id: string
   slug: string
@@ -36,16 +38,19 @@ type PackageRow = {
   price_from: number | null
   duration_days: number | null
   featured: boolean
-  agency_profiles: {
+  agency_profiles: Relation<{
     agency_name: string
     status: string
     agency_subscriptions?: { status: string; subscription_plans?: { priority_level: number }[] | null }[] | null
-  }[] | null
-  travel_categories: { name: string; slug: string }[] | null
+  }>
+  travel_categories: Relation<{ name: string; slug: string }>
   package_views?: { count: number }[]
   traveler_leads?: { count: number }[]
   agency_id: string | null
 }
+
+const firstRelation = <T,>(relation: Relation<T>): T | null =>
+  Array.isArray(relation) ? relation[0] ?? null : relation
 
 export function ResultsSection({ query }: { query?: string }) {
   const [packages, setPackages] = useState<Package[]>([])
@@ -82,19 +87,24 @@ export function ResultsSection({ query }: { query?: string }) {
 
         const settings = (settingsData ?? defaultMatchSettings) as MatchSettings
         const normalizedTerm = normalizeSearchText(term)
-        const activePackages = ((data ?? []) as PackageRow[]).filter(
-          (pkg) => pkg.agency_profiles?.[0]?.status === "active",
-        ).filter((pkg) =>
-          !normalizedTerm ||
-          [
-            pkg.title,
-            pkg.destination,
-            pkg.description,
-            pkg.travel_categories?.[0]?.name,
-            pkg.travel_categories?.[0]?.slug,
-            pkg.agency_profiles?.[0]?.agency_name,
-          ].some((value) => normalizeSearchText(value).includes(normalizedTerm)),
-        )
+        const activePackages = ((data ?? []) as PackageRow[])
+          .filter((pkg) => firstRelation(pkg.agency_profiles)?.status === "active")
+          .filter((pkg) => {
+            const agency = firstRelation(pkg.agency_profiles)
+            const category = firstRelation(pkg.travel_categories)
+
+            return (
+              !normalizedTerm ||
+              [
+                pkg.title,
+                pkg.destination,
+                pkg.description,
+                category?.name,
+                category?.slug,
+                agency?.agency_name,
+              ].some((value) => normalizeSearchText(value).includes(normalizedTerm))
+            )
+          })
         const agencyIds = Array.from(new Set(activePackages.map((pkg) => pkg.agency_id).filter(Boolean))) as string[]
         const reputationEntries = await Promise.all(
           agencyIds.map(async (agencyId) => {
@@ -114,14 +124,14 @@ export function ResultsSection({ query }: { query?: string }) {
                   title: b.title,
                   destination: b.destination,
                   description: b.description,
-                  categorySlug: b.travel_categories?.[0]?.slug,
-                  categoryName: b.travel_categories?.[0]?.name,
+                  categorySlug: firstRelation(b.travel_categories)?.slug,
+                  categoryName: firstRelation(b.travel_categories)?.name,
                   priceFrom: b.price_from,
                   featured: b.featured,
                   views: b.package_views?.[0]?.count ?? 0,
                   leads: b.traveler_leads?.[0]?.count ?? 0,
                   reputationScore: b.agency_id ? reputationByAgency.get(b.agency_id) ?? 0 : 0,
-                  priorityLevel: b.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
+                  priorityLevel: firstRelation(b.agency_profiles)?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
                 },
                 { query: term },
                 settings,
@@ -131,14 +141,14 @@ export function ResultsSection({ query }: { query?: string }) {
                   title: a.title,
                   destination: a.destination,
                   description: a.description,
-                  categorySlug: a.travel_categories?.[0]?.slug,
-                  categoryName: a.travel_categories?.[0]?.name,
+                  categorySlug: firstRelation(a.travel_categories)?.slug,
+                  categoryName: firstRelation(a.travel_categories)?.name,
                   priceFrom: a.price_from,
                   featured: a.featured,
                   views: a.package_views?.[0]?.count ?? 0,
                   leads: a.traveler_leads?.[0]?.count ?? 0,
                   reputationScore: a.agency_id ? reputationByAgency.get(a.agency_id) ?? 0 : 0,
-                  priorityLevel: a.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
+                  priorityLevel: firstRelation(a.agency_profiles)?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
                 },
                 { query: term },
                 settings,
@@ -150,9 +160,9 @@ export function ResultsSection({ query }: { query?: string }) {
           slug: pkg.slug,
           image: pkg.image_url || "/placeholder.jpg",
           destination: pkg.destination,
-          agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
+          agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "AgÃªncia",
           agencyId: pkg.agency_id,
-          categorySlug: pkg.travel_categories?.[0]?.slug ?? null,
+          categorySlug: firstRelation(pkg.travel_categories)?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
           duration: pkg.duration_days ? `${pkg.duration_days} dias` : "Sob consulta",
           match: calculateMatchScore(
@@ -160,19 +170,19 @@ export function ResultsSection({ query }: { query?: string }) {
               title: pkg.title,
               destination: pkg.destination,
               description: pkg.description,
-              categorySlug: pkg.travel_categories?.[0]?.slug,
-              categoryName: pkg.travel_categories?.[0]?.name,
+              categorySlug: firstRelation(pkg.travel_categories)?.slug,
+              categoryName: firstRelation(pkg.travel_categories)?.name,
               priceFrom: pkg.price_from,
               featured: pkg.featured,
               views: pkg.package_views?.[0]?.count ?? 0,
               leads: pkg.traveler_leads?.[0]?.count ?? 0,
               reputationScore: pkg.agency_id ? reputationByAgency.get(pkg.agency_id) ?? 0 : 0,
-              priorityLevel: pkg.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
+              priorityLevel: firstRelation(pkg.agency_profiles)?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
             },
             { query: term },
             settings,
           ),
-          tags: [pkg.travel_categories?.[0]?.name].filter(Boolean) as string[],
+          tags: [firstRelation(pkg.travel_categories)?.name].filter(Boolean) as string[],
         }))
         setPackages(next)
       })
@@ -226,11 +236,11 @@ export function ResultsSection({ query }: { query?: string }) {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 text-balance">
-            Pacotes mais compatíveis com{" "}
-            <span className="text-primary">você</span>.
+            Pacotes mais compatÃ­veis com{" "}
+            <span className="text-primary">vocÃª</span>.
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Opções selecionadas a partir do seu perfil e dos especialistas
+            OpÃ§Ãµes selecionadas a partir do seu perfil e dos especialistas
             recomendados.
           </p>
         </motion.div>
@@ -244,8 +254,8 @@ export function ResultsSection({ query }: { query?: string }) {
               Em breve, pacotes para o seu perfil
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Assim que as agências publicarem seus pacotes, as melhores opções
-              compatíveis com a sua busca aparecerão aqui.
+              Assim que as agÃªncias publicarem seus pacotes, as melhores opÃ§Ãµes
+              compatÃ­veis com a sua busca aparecerÃ£o aqui.
             </p>
           </div>
         ) : (
@@ -357,7 +367,7 @@ export function ResultsSection({ query }: { query?: string }) {
             size="lg"
             className="rounded-full px-8 border-border hover:border-primary/50 hover:bg-primary/5"
           >
-            Ver mais opções
+            Ver mais opÃ§Ãµes
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </motion.div>

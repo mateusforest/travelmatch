@@ -9,10 +9,13 @@ import { hasSupabaseEnv } from "@/lib/supabase/config"
 type Category = {
   id: string
   name: string
+  slug: string
   image_url: string | null
 }
 
-export function CategoriesSection() {
+const categoryFallbackImage = "/hero-plane-window.png"
+
+export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => void }) {
   const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export function CategoriesSection() {
     const supabase = createSupabaseBrowserClient()
     supabase
       .from("travel_categories")
-      .select("id,name,image_url")
+      .select("id,name,slug,image_url")
       .eq("active", true)
       .order("name", { ascending: true })
       .then(({ data, error }) => setCategories(error ? [] : (data ?? [])))
@@ -57,10 +60,11 @@ export function CategoriesSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.05 }}
               className="group cursor-pointer"
+              onClick={() => onSearch?.(category.name)}
             >
               <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
                 <Image
-                  src={category.image_url || "/placeholder.jpg"}
+                  src={category.image_url || categoryFallbackImage}
                   alt={category.name}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
