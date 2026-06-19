@@ -1,4 +1,4 @@
-export type PaymentProvider = "stripe" | "mercado_pago"
+export type PaymentProvider = "stripe"
 
 export type CheckoutIntentInput = {
   provider: PaymentProvider
@@ -24,10 +24,6 @@ export function createCheckoutIntentPayload(input: CheckoutIntentInput) {
 export const paymentProviders = {
   stripe: {
     name: "Stripe",
-    checkoutReady: false,
-  },
-  mercado_pago: {
-    name: "Mercado Pago",
     checkoutReady: true,
   },
 } as const

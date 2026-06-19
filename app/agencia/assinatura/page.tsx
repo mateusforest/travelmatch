@@ -112,7 +112,7 @@ export default async function AssinaturaPage() {
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-secondary">
             <CreditCard className="h-5 w-5" />
           </span>
-          Checkout Mercado Pago ativo para planos e produtos patrocinados.
+          Checkout Stripe ativo para planos e produtos patrocinados.
         </div>
       </SectionCard>
 

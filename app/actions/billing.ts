@@ -2,8 +2,8 @@
 
 import { randomUUID } from "crypto"
 import { redirect } from "next/navigation"
-import { createMercadoPagoPreference } from "@/lib/mercado-pago"
 import { createCheckoutIntentPayload } from "@/lib/payments"
+import { createStripeCheckoutSession } from "@/lib/stripe"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 type PlanSlug = "pro" | "premium"
@@ -55,7 +55,7 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
 
   const externalReference = `tm_${randomUUID()}`
   const amount = Number(plan.price ?? 0)
-  const preference = await createMercadoPagoPreference({
+  const session = await createStripeCheckoutSession({
     title: `TravelMatch ${plan.name}`,
     amount,
     externalReference,
@@ -63,6 +63,7 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
       agencyId,
       productType: "subscription",
       planSlug,
+      planId: plan.id as string,
     },
   })
 
@@ -70,18 +71,20 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
     .from("payment_intents")
     .insert({
       ...createCheckoutIntentPayload({
-        provider: "mercado_pago",
+        provider: "stripe",
         agencyId,
         productType: "subscription",
         referenceId: plan.id as string,
         amount,
       }),
+      gateway: "stripe",
       external_reference: externalReference,
-      checkout_url: preference.checkoutUrl,
-      provider_preference_id: preference.preferenceId,
+      checkout_url: session.checkoutUrl,
+      gateway_checkout_id: session.sessionId,
+      gateway_payment_id: session.paymentIntentId,
       provider_payload: {
         planSlug,
-        preference: preference.payload,
+        checkoutSession: session.payload,
       },
     })
 
@@ -89,14 +92,14 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
     throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
   }
 
-  redirect(preference.checkoutUrl)
+  redirect(session.checkoutUrl)
 }
 
 export async function checkoutPromotion(type: PromotionType) {
   const { supabase, agencyId } = await requireAgency()
   const product = promotionProducts[type]
   const externalReference = `tm_${randomUUID()}`
-  const preference = await createMercadoPagoPreference({
+  const session = await createStripeCheckoutSession({
     title: product.title,
     amount: product.amount,
     externalReference,
@@ -111,19 +114,21 @@ export async function checkoutPromotion(type: PromotionType) {
     .from("payment_intents")
     .insert({
       ...createCheckoutIntentPayload({
-        provider: "mercado_pago",
+        provider: "stripe",
         agencyId,
         productType: "promotion",
         referenceId: null,
         amount: product.amount,
       }),
+      gateway: "stripe",
       external_reference: externalReference,
-      checkout_url: preference.checkoutUrl,
-      provider_preference_id: preference.preferenceId,
+      checkout_url: session.checkoutUrl,
+      gateway_checkout_id: session.sessionId,
+      gateway_payment_id: session.paymentIntentId,
       provider_payload: {
         promotionType: type,
         days: product.days,
-        preference: preference.payload,
+        checkoutSession: session.payload,
       },
     })
 
@@ -131,5 +136,5 @@ export async function checkoutPromotion(type: PromotionType) {
     throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
   }
 
-  redirect(preference.checkoutUrl)
+  redirect(session.checkoutUrl)
 }
