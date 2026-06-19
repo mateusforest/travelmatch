@@ -14,6 +14,7 @@ export type AgencyProfileInput = {
   website: string
   instagram: string
   logo_url: string
+  banner_url?: string
 }
 
 export async function updateAgencyProfile(input: AgencyProfileInput) {
@@ -39,6 +40,7 @@ export async function updateAgencyProfile(input: AgencyProfileInput) {
       website: input.website.trim() || null,
       instagram: input.instagram.trim() || null,
       logo_url: input.logo_url.trim() || null,
+      banner_url: input.banner_url?.trim() || null,
     })
     .eq("user_id", user.id)
 
@@ -79,6 +81,45 @@ export async function uploadAgencyLogo(formData: FormData) {
   const { error } = await supabase
     .from("agency_profiles")
     .update({ logo_url: data.publicUrl })
+    .eq("user_id", user.id)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath("/agencia/perfil")
+  return { ok: true, url: data.publicUrl }
+}
+
+export async function uploadAgencyBanner(formData: FormData) {
+  const file = formData.get("banner")
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, message: "SessÃ£o expirada. FaÃ§a login novamente." }
+  }
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Selecione uma imagem." }
+  }
+
+  const ext = file.name.split(".").pop() || "png"
+  const path = `agency-banners/${user.id}/banner-${Date.now()}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from("travelmatch-images")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return { ok: false, message: uploadError.message }
+  }
+
+  const { data } = supabase.storage.from("travelmatch-images").getPublicUrl(path)
+  const { error } = await supabase
+    .from("agency_profiles")
+    .update({ banner_url: data.publicUrl })
     .eq("user_id", user.id)
 
   if (error) {

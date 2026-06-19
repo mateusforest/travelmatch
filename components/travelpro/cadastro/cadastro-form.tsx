@@ -126,6 +126,7 @@ export function CadastroForm() {
           value={form.telefone}
           onChange={(e) => update("telefone", e.target.value)}
           placeholder="(00) 00000-0000"
+          autoComplete="tel"
         />
       </div>
 
@@ -138,6 +139,7 @@ export function CadastroForm() {
             value={form.cidade}
             onChange={(e) => update("cidade", e.target.value)}
             placeholder="Sua cidade"
+            autoComplete="address-level2"
           />
         </div>
         <div className="space-y-2">

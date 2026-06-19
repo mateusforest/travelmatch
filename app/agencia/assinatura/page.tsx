@@ -5,10 +5,49 @@ import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { getAgencyBillingData } from "@/lib/data/billing"
 
 const promotionOptions = [
-  { type: "featured_7", title: "Destaque 7 dias", price: "R$ 97" },
-  { type: "featured_15", title: "Destaque 15 dias", price: "R$ 197" },
-  { type: "featured_30", title: "Destaque 30 dias", price: "R$ 497" },
-  { type: "boost", title: "TravelMatch Boost", price: "R$ 987" },
+  {
+    type: "featured_7",
+    title: "Destaque 7 dias",
+    price: "R$ 97,00",
+    includes: [
+      "Destaque na landing por 7 dias",
+      "Prioridade na seção de agências em destaque",
+      "Identificação como conteúdo promovido",
+    ],
+  },
+  {
+    type: "featured_15",
+    title: "Destaque 15 dias",
+    price: "R$ 197,00",
+    includes: [
+      "Destaque na landing por 15 dias",
+      "Prioridade na seção de agências em destaque",
+      "Identificação como conteúdo promovido",
+    ],
+  },
+  {
+    type: "featured_30",
+    title: "Destaque 30 dias",
+    price: "R$ 497,00",
+    includes: [
+      "Destaque na landing por 30 dias",
+      "Prioridade na seção de agências em destaque",
+      "Identificação como conteúdo promovido",
+    ],
+  },
+  {
+    type: "boost",
+    title: "TravelMatch Boost",
+    price: "R$ 987,00",
+    includes: [
+      "Destaque na landing",
+      "Postagem dedicada no Instagram TravelMatch",
+      "Stories dedicados",
+      "Campanha patrocinada",
+      "Verba de mídia inclusa",
+      "Relatório de desempenho",
+    ],
+  },
 ] as const
 
 export default async function AssinaturaPage() {
@@ -126,6 +165,14 @@ export default async function AssinaturaPage() {
             >
               <p className="text-sm font-semibold text-foreground">{option.title}</p>
               <p className="mt-1 text-lg font-bold text-foreground">{option.price}</p>
+              <ul className="mt-3 space-y-1.5">
+                {option.includes.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
               <Button
                 type="submit"
                 variant="outline"

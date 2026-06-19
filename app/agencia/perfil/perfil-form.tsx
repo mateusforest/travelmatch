@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
-import { updateAgencyProfile, uploadAgencyLogo } from "@/app/actions/profile"
+import { updateAgencyProfile, uploadAgencyBanner, uploadAgencyLogo } from "@/app/actions/profile"
 import type { AgencyProfileData } from "@/lib/data/agency"
 
 const allSpecialties = [
@@ -40,6 +40,7 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
   const [website, setWebsite] = useState(profile?.website ?? "")
   const [instagram, setInstagram] = useState(profile?.instagram ?? "")
   const [logoUrl, setLogoUrl] = useState(profile?.logo_url ?? "")
+  const [bannerUrl, setBannerUrl] = useState(profile?.banner_url ?? "")
   const [specialties, setSpecialties] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -65,6 +66,7 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
       website,
       instagram,
       logo_url: logoUrl,
+      banner_url: bannerUrl,
     })
 
     if (result.ok) {
@@ -87,6 +89,20 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
       setSaved(true)
     } else {
       setError(result.message ?? "Não foi possível enviar o logo.")
+    }
+  }
+
+  const uploadBanner = async (file: File | null) => {
+    if (!file) return
+
+    const formData = new FormData()
+    formData.set("banner", file)
+    const result = await uploadAgencyBanner(formData)
+    if (result.ok && result.url) {
+      setBannerUrl(result.url)
+      setSaved(true)
+    } else {
+      setError(result.message ?? "NÃ£o foi possÃ­vel enviar o banner.")
     }
   }
 
@@ -121,12 +137,19 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                 <label
                   htmlFor="banner"
                   className="mt-1.5 flex aspect-[3/1] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/40 text-center transition-colors hover:border-primary/40"
+                  style={bannerUrl ? { backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
                 >
-                  <span className="flex flex-col items-center text-muted-foreground">
+                  <span className={`flex flex-col items-center ${bannerUrl ? "rounded-lg bg-background/80 px-3 py-2 text-foreground" : "text-muted-foreground"}`}>
                     <ImagePlus className="mb-1 h-6 w-6" />
                     <span className="text-xs">Enviar banner (1200×400)</span>
                   </span>
-                  <input id="banner" type="file" accept="image/*" className="sr-only" />
+                  <input
+                    id="banner"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => uploadBanner(e.target.files?.[0] ?? null)}
+                  />
                 </label>
               </div>
               <div>
@@ -134,8 +157,9 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                 <label
                   htmlFor="logo"
                   className="mt-1.5 flex h-20 w-20 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 transition-colors hover:border-primary/40"
+                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
                 >
-                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  {!logoUrl && <ImagePlus className="h-5 w-5 text-muted-foreground" />}
                   <input
                     id="logo"
                     type="file"
@@ -144,6 +168,9 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                     onChange={(e) => uploadLogo(e.target.files?.[0] ?? null)}
                   />
                 </label>
+                {logoUrl && (
+                  <p className="mt-2 text-xs text-muted-foreground">Logo salvo.</p>
+                )}
                 <Input
                   id="logo-url"
                   value={logoUrl}
@@ -196,6 +223,8 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(11) 0000-0000"
                     className="mt-1.5"
+                    type="tel"
+                    autoComplete="tel"
                   />
                 </div>
                 <div>
@@ -206,6 +235,7 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Sua cidade"
                     className="mt-1.5"
+                    autoComplete="address-level2"
                   />
                 </div>
                 <div>

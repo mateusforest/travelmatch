@@ -90,6 +90,7 @@ export function LeadForm({
             value={travelerName}
             onChange={(e) => setTravelerName(e.target.value)}
             className="mt-1.5"
+            autoComplete="name"
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -101,6 +102,7 @@ export function LeadForm({
               value={travelerEmail}
               onChange={(e) => setTravelerEmail(e.target.value)}
               className="mt-1.5"
+              autoComplete="email"
             />
           </div>
           <div>
@@ -110,6 +112,7 @@ export function LeadForm({
               value={travelerPhone}
               onChange={(e) => setTravelerPhone(e.target.value)}
               className="mt-1.5"
+              autoComplete="tel"
             />
           </div>
         </div>
@@ -120,6 +123,7 @@ export function LeadForm({
             value={desiredDestination}
             onChange={(e) => setDesiredDestination(e.target.value)}
             className="mt-1.5"
+            autoComplete="address-level2"
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -130,6 +134,7 @@ export function LeadForm({
               value={travelDate}
               onChange={(e) => setTravelDate(e.target.value)}
               className="mt-1.5"
+              autoComplete="off"
             />
           </div>
           <div>
@@ -150,6 +155,8 @@ export function LeadForm({
               value={budgetRange}
               onChange={(e) => setBudgetRange(e.target.value)}
               className="mt-1.5"
+              inputMode="decimal"
+              autoComplete="off"
             />
           </div>
         </div>

@@ -261,6 +261,40 @@ export async function uploadPackageImage(packageId: string, formData: FormData) 
   return { ok: true, url: data.publicUrl }
 }
 
+export async function uploadPackageDraftImage(formData: FormData) {
+  const file = formData.get("image")
+  const { supabase, agencyId, error: agencyError } = await getAgencyIdForCurrentUser()
+
+  if (!agencyId) {
+    return { ok: false, message: agencyError }
+  }
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Selecione uma imagem." }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, message: "SessÃ£o expirada. FaÃ§a login novamente." }
+  }
+
+  const ext = file.name.split(".").pop() || "png"
+  const path = `package-images/${user.id}/draft-${Date.now()}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from("travelmatch-images")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return { ok: false, message: uploadError.message }
+  }
+
+  const { data } = supabase.storage.from("travelmatch-images").getPublicUrl(path)
+  return { ok: true, url: data.publicUrl }
+}
+
 export async function deleteAgencyPackage(packageId: string) {
   const { supabase, agencyId, error: agencyError } = await getAgencyIdForCurrentUser()
 

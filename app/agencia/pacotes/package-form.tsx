@@ -24,7 +24,7 @@ import {
 import { createAgencyPackage, updateAgencyPackage, type PackageInput } from "@/app/actions/packages"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { AgencyPackageDetails } from "@/lib/data/agency"
-import { uploadPackageImage } from "@/app/actions/packages"
+import { uploadPackageDraftImage, uploadPackageImage } from "@/app/actions/packages"
 
 const steps = [
   { n: 1, title: "Informações básicas" },
@@ -102,11 +102,14 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
   }
 
   const uploadImage = async (file: File | null) => {
-    if (!pkg || !file) return
+    if (!file) return
 
     const formData = new FormData()
     formData.set("image", file)
-    const result = await uploadPackageImage(pkg.id, formData)
+    const result = pkg
+      ? await uploadPackageImage(pkg.id, formData)
+      : await uploadPackageDraftImage(formData)
+
     if (result.ok && result.url) {
       setImageUrl(result.url)
     } else if (result.message) {
@@ -188,6 +191,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 className="mt-1.5"
+                autoComplete="address-level2"
               />
             </div>
             <div>
@@ -213,6 +217,8 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
                 value={priceFrom}
                 onChange={(e) => setPriceFrom(e.target.value)}
                 className="mt-1.5"
+                inputMode="decimal"
+                autoComplete="off"
               />
             </div>
             <div>
@@ -223,6 +229,8 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
                 value={durationDays}
                 onChange={(e) => setDurationDays(e.target.value)}
                 className="mt-1.5"
+                inputMode="numeric"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -286,9 +294,12 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               </span>
             </label>
             {imageUrl && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Imagem principal salva.
-              </p>
+              <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                <img src={imageUrl} alt="" className="aspect-video w-full object-cover" />
+                <p className="p-3 text-xs text-muted-foreground">
+                  Imagem principal salva.
+                </p>
+              </div>
             )}
           </div>
         )}

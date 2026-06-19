@@ -15,6 +15,7 @@ type AgencyProfile = {
   state: string | null
   description: string | null
   logo_url: string | null
+  banner_url: string | null
   website: string | null
   instagram: string | null
   slug: string | null
