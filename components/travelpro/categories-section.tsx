@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseEnv } from "@/lib/supabase/config"
 
 type Category = {
   id: string
@@ -15,13 +16,18 @@ export function CategoriesSection() {
   const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
+    if (!hasSupabaseEnv()) {
+      setCategories([])
+      return
+    }
+
     const supabase = createSupabaseBrowserClient()
     supabase
       .from("travel_categories")
       .select("id,name,image_url")
       .eq("active", true)
       .order("name", { ascending: true })
-      .then(({ data }) => setCategories(data ?? []))
+      .then(({ data, error }) => setCategories(error ? [] : (data ?? [])))
   }, [])
 
   return (

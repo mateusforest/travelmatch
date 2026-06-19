@@ -10,6 +10,7 @@ import { BenefitsSection } from "@/components/travelpro/benefits-section"
 import { ResultsSection } from "@/components/travelpro/results-section"
 import { SpecialistsSection } from "@/components/travelpro/specialists-section"
 import { registerMatchSearch } from "@/app/actions/public"
+import { hasSupabaseEnv } from "@/lib/supabase/config"
 
 const fade = {
   initial: { opacity: 0, y: 24 },
@@ -27,7 +28,9 @@ export function HomeExperience() {
     if (!next) return
     setQuery(next)
     setHasSearched(true)
-    void registerMatchSearch({ search_term: next })
+    if (hasSupabaseEnv()) {
+      void registerMatchSearch({ search_term: next })
+    }
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 

@@ -24,6 +24,7 @@ import {
 import { createAgencyPackage, updateAgencyPackage, type PackageInput } from "@/app/actions/packages"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { AgencyPackageDetails } from "@/lib/data/agency"
+import { uploadPackageImage } from "@/app/actions/packages"
 
 const steps = [
   { n: 1, title: "Informações básicas" },
@@ -48,6 +49,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
   const [priceFrom, setPriceFrom] = useState(pkg?.price_from ? String(pkg.price_from) : "")
   const [durationDays, setDurationDays] = useState(pkg?.duration_days ? String(pkg.duration_days) : "")
   const [description, setDescription] = useState(pkg?.description ?? "")
+  const [imageUrl, setImageUrl] = useState(pkg?.image_url ?? "")
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -82,6 +84,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
     priceFrom,
     durationDays,
     status,
+    imageUrl,
   })
 
   const savePackage = async (status: PackageInput["status"]) => {
@@ -95,6 +98,19 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
     if (result && !result.ok) {
       setError(result.message)
       setSubmitting(false)
+    }
+  }
+
+  const uploadImage = async (file: File | null) => {
+    if (!pkg || !file) return
+
+    const formData = new FormData()
+    formData.set("image", file)
+    const result = await uploadPackageImage(pkg.id, formData)
+    if (result.ok && result.url) {
+      setImageUrl(result.url)
+    } else if (result.message) {
+      setError(result.message)
     }
   }
 
@@ -258,11 +274,22 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               <span className="mt-1 text-xs text-muted-foreground">
                 PNG, JPG até 10MB cada
               </span>
-              <input id="gallery" type="file" multiple accept="image/*" className="sr-only" />
+              <input
+                id="gallery"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => uploadImage(e.target.files?.[0] ?? null)}
+              />
               <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground">
                 <Upload className="h-4 w-4" /> Selecionar arquivos
               </span>
             </label>
+            {imageUrl && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Imagem principal salva.
+              </p>
+            )}
           </div>
         )}
 

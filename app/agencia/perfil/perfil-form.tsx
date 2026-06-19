@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
-import { updateAgencyProfile } from "@/app/actions/profile"
+import { updateAgencyProfile, uploadAgencyLogo } from "@/app/actions/profile"
 import type { AgencyProfileData } from "@/lib/data/agency"
 
 const allSpecialties = [
@@ -76,6 +76,20 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
     setSubmitting(false)
   }
 
+  const uploadLogo = async (file: File | null) => {
+    if (!file) return
+
+    const formData = new FormData()
+    formData.set("logo", file)
+    const result = await uploadAgencyLogo(formData)
+    if (result.ok && result.url) {
+      setLogoUrl(result.url)
+      setSaved(true)
+    } else {
+      setError(result.message ?? "Não foi possível enviar o logo.")
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -122,7 +136,13 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                   className="mt-1.5 flex h-20 w-20 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 transition-colors hover:border-primary/40"
                 >
                   <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                  <input id="logo" type="file" accept="image/*" className="sr-only" />
+                  <input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => uploadLogo(e.target.files?.[0] ?? null)}
+                  />
                 </label>
                 <Input
                   id="logo-url"

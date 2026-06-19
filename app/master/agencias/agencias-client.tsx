@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import {
   Building2,
   MapPin,
@@ -108,8 +109,10 @@ export function MasterAgenciasClient({ agencies }: { agencies: MasterAgency[] })
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" /> Visualizar
+                    <DropdownMenuItem asChild disabled={!a.slug}>
+                      <Link href={a.slug ? `/agencias/${a.slug}` : "/master/agencias"}>
+                        <Eye className="mr-2 h-4 w-4" /> Visualizar
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={(event) => {

@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { MessageCircle, ChevronRight, Clock, MapPin, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
 import { createTravelerLead } from "@/app/actions/public"
 
 type Package = {
   id: string
+  slug: string
   image: string
   destination: string
   agency: string
@@ -37,10 +40,15 @@ export function ResultsSection({ query }: { query?: string }) {
   const [packages, setPackages] = useState<Package[]>([])
 
   useEffect(() => {
+    if (!hasSupabaseEnv()) {
+      setPackages([])
+      return
+    }
+
     const supabase = createSupabaseBrowserClient()
     let request = supabase
       .from("packages")
-      .select("id,agency_id,image_url,destination,price_from,duration_days,agency_profiles(agency_name),travel_categories(name,slug)")
+      .select("id,slug,agency_id,image_url,destination,price_from,duration_days,agency_profiles(agency_name),travel_categories(name,slug)")
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(8)
@@ -51,9 +59,15 @@ export function ResultsSection({ query }: { query?: string }) {
     }
 
     request
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          setPackages([])
+          return
+        }
+
         const next = ((data ?? []) as PackageRow[]).map((pkg) => ({
           id: pkg.id,
+          slug: (pkg as PackageRow & { slug: string }).slug,
           image: pkg.image_url || "/placeholder.jpg",
           destination: pkg.destination,
           agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
@@ -69,6 +83,10 @@ export function ResultsSection({ query }: { query?: string }) {
   }, [query])
 
   const registerInterest = (pkg: Package, message: string) => {
+    if (!hasSupabaseEnv()) {
+      return
+    }
+
     void createTravelerLead({
       package_id: pkg.id,
       agency_id: pkg.agencyId,
@@ -179,12 +197,17 @@ export function ResultsSection({ query }: { query?: string }) {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <Button
+                      asChild
                       variant="outline"
-                      onClick={() => registerInterest(pkg, "Solicitou detalhes do pacote")}
                       className="flex-1 rounded-xl border-border hover:border-primary/50 hover:bg-primary/5"
                     >
-                      Detalhes
-                      <ChevronRight className="w-4 h-4 ml-1" />
+                      <Link
+                        href={`/pacotes/${pkg.slug}`}
+                        onClick={() => registerInterest(pkg, "Solicitou detalhes do pacote")}
+                      >
+                        Detalhes
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Link>
                     </Button>
                     <Button
                       onClick={() => registerInterest(pkg, "Solicitou contato via WhatsApp")}

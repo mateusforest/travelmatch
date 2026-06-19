@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import {
   Search,
   MoreVertical,
@@ -129,6 +130,11 @@ export function MasterPacotesClient({ packages }: { packages: MasterPackage[] })
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/pacotes/${p.slug}`}>
+                          <Eye className="mr-2 h-4 w-4" /> Visualizar
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={(event) => {
                           event.preventDefault()

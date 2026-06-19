@@ -13,6 +13,7 @@ export type PackageInput = {
   priceFrom: string
   durationDays: string
   status: "draft" | "published"
+  imageUrl?: string
 }
 
 function numberFromText(value: string) {
@@ -59,6 +60,7 @@ export async function createAgencyPackage(input: PackageInput) {
     price_from: numberFromText(input.priceFrom),
     duration_days: numberFromText(input.durationDays),
     status: input.status,
+    image_url: input.imageUrl?.trim() || null,
   })
 
   if (error) {
@@ -116,6 +118,7 @@ export async function updateAgencyPackage(packageId: string, input: PackageInput
       price_from: numberFromText(input.priceFrom),
       duration_days: numberFromText(input.durationDays),
       status: input.status,
+      image_url: input.imageUrl?.trim() || null,
     })
     .eq("id", packageId)
     .eq("agency_id", agencyId)
@@ -149,6 +152,63 @@ export async function setAgencyPackageStatus(packageId: string, status: "draft" 
   revalidatePath("/agencia/pacotes")
   revalidatePath(`/agencia/pacotes/${packageId}`)
   return { ok: true }
+}
+
+export async function uploadPackageImage(packageId: string, formData: FormData) {
+  const file = formData.get("image")
+  const { supabase, agencyId, error: agencyError } = await getAgencyIdForCurrentUser()
+
+  if (!agencyId) {
+    return { ok: false, message: agencyError }
+  }
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Selecione uma imagem." }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." }
+  }
+
+  const { data: pkg, error: pkgError } = await supabase
+    .from("packages")
+    .select("id")
+    .eq("id", packageId)
+    .eq("agency_id", agencyId)
+    .maybeSingle()
+
+  if (pkgError || !pkg) {
+    return { ok: false, message: "Pacote não encontrado." }
+  }
+
+  const ext = file.name.split(".").pop() || "png"
+  const path = `package-images/${user.id}/${packageId}-${Date.now()}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from("travelmatch-images")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    return { ok: false, message: uploadError.message }
+  }
+
+  const { data } = supabase.storage.from("travelmatch-images").getPublicUrl(path)
+  const { error } = await supabase
+    .from("packages")
+    .update({ image_url: data.publicUrl })
+    .eq("id", packageId)
+    .eq("agency_id", agencyId)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath("/agencia/pacotes")
+  revalidatePath(`/agencia/pacotes/${packageId}`)
+  return { ok: true, url: data.publicUrl }
 }
 
 export async function deleteAgencyPackage(packageId: string) {

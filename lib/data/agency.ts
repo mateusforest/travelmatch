@@ -16,6 +16,7 @@ type AgencyProfile = {
   logo_url: string | null
   website: string | null
   instagram: string | null
+  slug: string | null
   status: string
   plan: string
   created_at: string
@@ -39,6 +40,7 @@ type PackageRow = {
   updated_at?: string
   travel_categories?: { name: string }[] | null
   traveler_leads?: { count: number }[]
+  package_views?: { count: number }[]
 }
 
 type LeadRow = {
@@ -133,7 +135,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       activePackages: 0,
       leadsLast30Days: 0,
       viewsLast30Days: 0,
-      conversionRate: "—",
+      conversionRate: "0%",
     }
   }
 
@@ -141,7 +143,12 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
   const since = new Date()
   since.setDate(since.getDate() - 30)
 
-  const [{ count: activePackages }, { count: leadsLast30Days }] = await Promise.all([
+  const [
+    { count: activePackages },
+    { count: leadsLast30Days },
+    { count: packageViewsLast30Days },
+    { count: profileViewsLast30Days },
+  ] = await Promise.all([
     supabase
       .from("packages")
       .select("id", { count: "exact", head: true })
@@ -152,13 +159,27 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       .select("id", { count: "exact", head: true })
       .eq("agency_id", agency.id)
       .gte("created_at", since.toISOString()),
+    supabase
+      .from("package_views")
+      .select("id", { count: "exact", head: true })
+      .eq("agency_id", agency.id)
+      .gte("created_at", since.toISOString()),
+    supabase
+      .from("agency_profile_views")
+      .select("id", { count: "exact", head: true })
+      .eq("agency_id", agency.id)
+      .gte("created_at", since.toISOString()),
   ])
+
+  const viewsLast30Days = (packageViewsLast30Days ?? 0) + (profileViewsLast30Days ?? 0)
+  const conversionRate =
+    viewsLast30Days > 0 ? `${Math.round(((leadsLast30Days ?? 0) / viewsLast30Days) * 100)}%` : "0%"
 
   return {
     activePackages: activePackages ?? 0,
     leadsLast30Days: leadsLast30Days ?? 0,
-    viewsLast30Days: 0,
-    conversionRate: "—",
+    viewsLast30Days,
+    conversionRate,
   }
 }
 
@@ -172,7 +193,7 @@ export async function getAgencyPackages(): Promise<AgencyPackage[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("packages")
-    .select("id,title,destination,price_from,status,image_url,featured,traveler_leads(count)")
+    .select("id,title,destination,price_from,status,image_url,featured,traveler_leads(count),package_views(count)")
     .eq("agency_id", agency.id)
     .order("created_at", { ascending: false })
 
@@ -186,7 +207,7 @@ export async function getAgencyPackages(): Promise<AgencyPackage[]> {
     destination: pkg.destination,
     price: formatCurrencyBRL(pkg.price_from),
     match: 0,
-    views: 0,
+    views: pkg.package_views?.[0]?.count ?? 0,
     leads: pkg.traveler_leads?.[0]?.count ?? 0,
     status: packageStatusMap[pkg.status] ?? "Rascunho",
     image: pkg.image_url ?? undefined,

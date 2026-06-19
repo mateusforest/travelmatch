@@ -1,6 +1,7 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { hasSupabaseEnv } from "@/lib/supabase/config"
 
 type LeadInput = {
   package_id?: string | null
@@ -14,6 +15,10 @@ type LeadInput = {
 }
 
 export async function createTravelerLead(input: LeadInput) {
+  if (!hasSupabaseEnv()) {
+    return { ok: false, message: "Supabase não configurado." }
+  }
+
   const hasMinimum =
     Boolean(input.package_id) ||
     Boolean(input.agency_id) ||
@@ -70,7 +75,7 @@ export async function registerMatchSearch(input: {
 }) {
   const searchTerm = input.search_term.trim()
 
-  if (!searchTerm) {
+  if (!searchTerm || !hasSupabaseEnv()) {
     return { ok: false }
   }
 
@@ -86,4 +91,34 @@ export async function registerMatchSearch(input: {
   }
 
   return { ok: true }
+}
+
+export async function registerPackageView(input: {
+  package_id: string
+  agency_id: string
+}) {
+  if (!hasSupabaseEnv()) {
+    return { ok: false }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.from("package_views").insert({
+    package_id: input.package_id,
+    agency_id: input.agency_id,
+  })
+
+  return { ok: !error }
+}
+
+export async function registerAgencyProfileView(agencyId: string) {
+  if (!hasSupabaseEnv()) {
+    return { ok: false }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.from("agency_profile_views").insert({
+    agency_id: agencyId,
+  })
+
+  return { ok: !error }
 }

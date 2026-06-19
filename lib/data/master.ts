@@ -3,6 +3,7 @@ import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/serve
 
 type MasterAgencyRow = {
   id: string
+  slug: string | null
   agency_name: string
   city: string | null
   state: string | null
@@ -15,6 +16,7 @@ type MasterAgencyRow = {
 
 type MasterPackageRow = {
   id: string
+  slug: string
   title: string
   destination: string
   status: string
@@ -22,6 +24,7 @@ type MasterPackageRow = {
   agency_profiles: { agency_name: string }[] | null
   travel_categories: { name: string }[] | null
   traveler_leads?: { count: number }[]
+  package_views?: { count: number }[]
 }
 
 export type MasterOverviewData = {
@@ -36,6 +39,7 @@ export type MasterOverviewData = {
 
 export type MasterAgency = {
   id: string
+  slug: string | null
   name: string
   city: string
   specialty: string
@@ -48,6 +52,7 @@ export type MasterAgency = {
 
 export type MasterPackage = {
   id: string
+  slug: string
   title: string
   agency: string
   category: string
@@ -162,7 +167,7 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("agency_profiles")
-    .select("id,agency_name,city,state,description,status,plan,packages(count),traveler_leads(count)")
+    .select("id,slug,agency_name,city,state,description,status,plan,packages(count),traveler_leads(count)")
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -171,6 +176,7 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
 
   return ((data ?? []) as MasterAgencyRow[]).map((agency) => ({
     id: agency.id,
+    slug: agency.slug,
     name: agency.agency_name,
     city: [agency.city, agency.state].filter(Boolean).join(", ") || "Não informado",
     specialty: agency.description || "Perfil em construção",
@@ -192,7 +198,7 @@ export async function getMasterPackages(): Promise<MasterPackage[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("packages")
-    .select("id,title,destination,status,featured,agency_profiles(agency_name),travel_categories(name),traveler_leads(count)")
+    .select("id,slug,title,destination,status,featured,agency_profiles(agency_name),travel_categories(name),traveler_leads(count),package_views(count)")
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -201,11 +207,12 @@ export async function getMasterPackages(): Promise<MasterPackage[]> {
 
   return ((data ?? []) as MasterPackageRow[]).map((pkg) => ({
     id: pkg.id,
+    slug: pkg.slug,
     title: pkg.title,
     agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
     category: pkg.travel_categories?.[0]?.name ?? "Sem categoria",
     destination: pkg.destination,
-    views: 0,
+    views: pkg.package_views?.[0]?.count ?? 0,
     leads: pkg.traveler_leads?.[0]?.count ?? 0,
     status: pkg.featured ? "Destaque" : pkg.status === "published" ? "Ativo" : "Pendente",
     featured: pkg.featured,
