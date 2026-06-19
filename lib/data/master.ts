@@ -7,6 +7,7 @@ type MasterAgencyRow = {
   city: string | null
   state: string | null
   description: string | null
+  status: string
   plan: string
   packages?: { count: number }[]
   traveler_leads?: { count: number }[]
@@ -34,16 +35,19 @@ export type MasterOverviewData = {
 }
 
 export type MasterAgency = {
+  id: string
   name: string
   city: string
   specialty: string
   plan: string
+  status: string
   packages: number
   leads: number
   score: number
 }
 
 export type MasterPackage = {
+  id: string
   title: string
   agency: string
   category: string
@@ -51,6 +55,7 @@ export type MasterPackage = {
   views: number
   leads: number
   status: string
+  featured: boolean
 }
 
 async function requireMaster() {
@@ -157,7 +162,7 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("agency_profiles")
-    .select("id,agency_name,city,state,description,plan,packages(count),traveler_leads(count)")
+    .select("id,agency_name,city,state,description,status,plan,packages(count),traveler_leads(count)")
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -165,10 +170,12 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
   }
 
   return ((data ?? []) as MasterAgencyRow[]).map((agency) => ({
+    id: agency.id,
     name: agency.agency_name,
     city: [agency.city, agency.state].filter(Boolean).join(", ") || "Não informado",
     specialty: agency.description || "Perfil em construção",
     plan: agency.plan === "performance" ? "Performance" : "Essencial",
+    status: agency.status,
     packages: agency.packages?.[0]?.count ?? 0,
     leads: agency.traveler_leads?.[0]?.count ?? 0,
     score: 0,
@@ -193,6 +200,7 @@ export async function getMasterPackages(): Promise<MasterPackage[]> {
   }
 
   return ((data ?? []) as MasterPackageRow[]).map((pkg) => ({
+    id: pkg.id,
     title: pkg.title,
     agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
     category: pkg.travel_categories?.[0]?.name ?? "Sem categoria",
@@ -200,5 +208,6 @@ export async function getMasterPackages(): Promise<MasterPackage[]> {
     views: 0,
     leads: pkg.traveler_leads?.[0]?.count ?? 0,
     status: pkg.featured ? "Destaque" : pkg.status === "published" ? "Ativo" : "Pendente",
+    featured: pkg.featured,
   }))
 }

@@ -7,12 +7,15 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatCurrencyBRL } from "@/lib/format"
+import { createTravelerLead } from "@/app/actions/public"
 
 type Package = {
   id: string
   image: string
   destination: string
   agency: string
+  agencyId: string | null
+  categorySlug: string | null
   price: string
   duration: string
   match: number
@@ -26,26 +29,36 @@ type PackageRow = {
   price_from: number | null
   duration_days: number | null
   agency_profiles: { agency_name: string }[] | null
-  travel_categories: { name: string }[] | null
+  travel_categories: { name: string; slug: string }[] | null
+  agency_id: string | null
 }
 
-export function ResultsSection() {
+export function ResultsSection({ query }: { query?: string }) {
   const [packages, setPackages] = useState<Package[]>([])
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient()
-    supabase
+    let request = supabase
       .from("packages")
-      .select("id,image_url,destination,price_from,duration_days,agency_profiles(agency_name),travel_categories(name)")
+      .select("id,agency_id,image_url,destination,price_from,duration_days,agency_profiles(agency_name),travel_categories(name,slug)")
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(8)
+
+    const term = query?.trim()
+    if (term) {
+      request = request.or(`destination.ilike.%${term}%,title.ilike.%${term}%`)
+    }
+
+    request
       .then(({ data }) => {
         const next = ((data ?? []) as PackageRow[]).map((pkg) => ({
           id: pkg.id,
           image: pkg.image_url || "/placeholder.jpg",
           destination: pkg.destination,
           agency: pkg.agency_profiles?.[0]?.agency_name ?? "Agência",
+          agencyId: pkg.agency_id,
+          categorySlug: pkg.travel_categories?.[0]?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
           duration: pkg.duration_days ? `${pkg.duration_days} dias` : "Sob consulta",
           match: 0,
@@ -53,7 +66,17 @@ export function ResultsSection() {
         }))
         setPackages(next)
       })
-  }, [])
+  }, [query])
+
+  const registerInterest = (pkg: Package, message: string) => {
+    void createTravelerLead({
+      package_id: pkg.id,
+      agency_id: pkg.agencyId,
+      desired_destination: pkg.destination,
+      category_slug: pkg.categorySlug,
+      message,
+    })
+  }
 
   return (
     <section className="py-24 relative" id="pacotes">
@@ -157,12 +180,16 @@ export function ResultsSection() {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
+                      onClick={() => registerInterest(pkg, "Solicitou detalhes do pacote")}
                       className="flex-1 rounded-xl border-border hover:border-primary/50 hover:bg-primary/5"
                     >
                       Detalhes
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
-                    <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl">
+                    <Button
+                      onClick={() => registerInterest(pkg, "Solicitou contato via WhatsApp")}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                    >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       WhatsApp
                     </Button>

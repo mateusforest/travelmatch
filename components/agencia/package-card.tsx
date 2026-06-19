@@ -1,23 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import {
-  MoreHorizontal,
-  Eye,
-  Inbox,
-  Star,
-  Pencil,
-  Copy,
-  Archive,
-  Trash2,
-} from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Eye, Inbox, Star } from "lucide-react"
+import { PackageActions } from "@/components/agencia/package-actions"
 
 export type AgencyPackage = {
   id: string
@@ -55,29 +40,7 @@ export function PackageCard({ pkg }: { pkg: AgencyPackage }) {
           {pkg.status}
         </span>
         <div className="absolute right-3 top-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="grid h-8 w-8 place-items-center rounded-full bg-card/90 text-foreground backdrop-blur-md transition-colors hover:bg-card"
-              aria-label="Ações do pacote"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Pencil className="mr-2 h-4 w-4" /> Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Copy className="mr-2 h-4 w-4" /> Duplicar
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Archive className="mr-2 h-4 w-4" /> Arquivar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <PackageActions pkg={pkg} />
         </div>
       </div>
 

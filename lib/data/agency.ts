@@ -24,12 +24,20 @@ type AgencyProfile = {
 
 type PackageRow = {
   id: string
+  agency_id?: string
   title: string
+  slug?: string
   destination: string
+  category_id?: string | null
+  description?: string
   price_from: number | null
+  duration_days?: number | null
   status: string
   image_url: string | null
   featured: boolean
+  created_at?: string
+  updated_at?: string
+  travel_categories?: { name: string }[] | null
   traveler_leads?: { count: number }[]
 }
 
@@ -56,6 +64,24 @@ export type AgencyDashboardData = {
   leadsLast30Days: number
   viewsLast30Days: number
   conversionRate: string
+}
+
+export type AgencyProfileData = AgencyProfile
+
+export type AgencyPackageDetails = {
+  id: string
+  title: string
+  destination: string
+  category_id: string | null
+  category_name: string
+  description: string
+  price_from: number | null
+  duration_days: number | null
+  image_url: string | null
+  status: "draft" | "published" | "archived"
+  featured: boolean
+  created_at: string
+  updated_at: string
 }
 
 const leadStatusMap: Record<string, AgencyLead["status"]> = {
@@ -165,6 +191,54 @@ export async function getAgencyPackages(): Promise<AgencyPackage[]> {
     status: packageStatusMap[pkg.status] ?? "Rascunho",
     image: pkg.image_url ?? undefined,
   }))
+}
+
+export async function getAgencyPackageDetails(
+  packageId: string,
+): Promise<AgencyPackageDetails | null> {
+  const agency = await getAuthenticatedAgency()
+
+  if (!agency) {
+    return null
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from("packages")
+    .select("id,title,destination,category_id,description,price_from,duration_days,image_url,status,featured,created_at,updated_at,travel_categories(name)")
+    .eq("id", packageId)
+    .eq("agency_id", agency.id)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  if (!data) {
+    return null
+  }
+
+  const pkg = data as PackageRow
+
+  return {
+    id: pkg.id,
+    title: pkg.title,
+    destination: pkg.destination,
+    category_id: pkg.category_id ?? null,
+    category_name: pkg.travel_categories?.[0]?.name ?? "Sem categoria",
+    description: pkg.description ?? "",
+    price_from: pkg.price_from,
+    duration_days: pkg.duration_days ?? null,
+    image_url: pkg.image_url,
+    status: pkg.status as AgencyPackageDetails["status"],
+    featured: pkg.featured,
+    created_at: pkg.created_at ?? "",
+    updated_at: pkg.updated_at ?? "",
+  }
+}
+
+export async function getAgencyProfile(): Promise<AgencyProfileData | null> {
+  return getAuthenticatedAgency()
 }
 
 export async function getAgencyLeads(): Promise<AgencyLead[]> {

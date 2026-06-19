@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import {
   Search,
   MoreVertical,
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { MasterPackage } from "@/lib/data/master"
+import { setMasterPackageStatus, setPackageFeatured } from "@/app/actions/master"
 
 const statusFilters = ["Todos", "Ativo", "Pendente", "Destaque", "Oculto"]
 
@@ -37,6 +38,7 @@ const statusStyle: Record<string, string> = {
 export function MasterPacotesClient({ packages }: { packages: MasterPackage[] }) {
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState("Todos")
+  const [pending, startTransition] = useTransition()
 
   const filtered = packages.filter((p) => {
     const matchesQuery =
@@ -127,13 +129,38 @@ export function MasterPacotesClient({ packages }: { packages: MasterPackage[] })
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          startTransition(() => {
+                            void setMasterPackageStatus(p.id, "published")
+                          })
+                        }}
+                        disabled={pending}
+                      >
                         <CheckCircle2 className="mr-2 h-4 w-4" /> Aprovar
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Star className="mr-2 h-4 w-4" /> Destacar
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          startTransition(() => {
+                            void setPackageFeatured(p.id, !p.featured)
+                          })
+                        }}
+                        disabled={pending}
+                      >
+                        <Star className="mr-2 h-4 w-4" />
+                        {p.featured ? "Remover destaque" : "Destacar"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          startTransition(() => {
+                            void setMasterPackageStatus(p.id, "draft")
+                          })
+                        }}
+                        disabled={pending}
+                      >
                         <EyeOff className="mr-2 h-4 w-4" /> Ocultar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

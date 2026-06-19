@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import {
   Building2,
   MapPin,
@@ -12,6 +12,7 @@ import {
   Archive,
   Package,
   Inbox,
+  CheckCircle2,
 } from "lucide-react"
 import { EmptyState } from "@/components/agencia/ui-bits"
 import { HealthScoreBadge, scoreLabel } from "@/components/master/master-bits"
@@ -25,12 +26,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { MasterAgency } from "@/lib/data/master"
+import { setAgencyStatus } from "@/app/actions/master"
 
 const plans = ["Todos os planos", "Essencial", "Performance"]
 
 export function MasterAgenciasClient({ agencies }: { agencies: MasterAgency[] }) {
   const [query, setQuery] = useState("")
   const [plan, setPlan] = useState("Todos os planos")
+  const [pending, startTransition] = useTransition()
 
   const filtered = agencies.filter((a) => {
     const matchesQuery =
@@ -108,11 +111,30 @@ export function MasterAgenciasClient({ agencies }: { agencies: MasterAgency[] })
                     <DropdownMenuItem>
                       <Eye className="mr-2 h-4 w-4" /> Visualizar
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        startTransition(() => {
+                          void setAgencyStatus(a.id, "active")
+                        })
+                      }}
+                      disabled={pending}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Aprovar
+                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Pencil className="mr-2 h-4 w-4" /> Editar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        startTransition(() => {
+                          void setAgencyStatus(a.id, "suspended")
+                        })
+                      }}
+                      disabled={pending}
+                    >
                       <PauseCircle className="mr-2 h-4 w-4" /> Suspender
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-red-600 focus:text-red-600">
