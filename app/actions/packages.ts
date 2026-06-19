@@ -22,6 +22,35 @@ function numberFromText(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+async function getPackageLimitState(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  agencyId: string,
+  excludingPackageId?: string,
+) {
+  const { data: subscription } = await supabase
+    .from("agency_subscriptions")
+    .select("subscription_plans(package_limit)")
+    .eq("agency_id", agencyId)
+    .in("status", ["trial", "active"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const limit = (subscription?.subscription_plans?.[0]?.package_limit ?? 3) as number | null
+  if (limit === null) return { allowed: true, limit, count: 0 }
+
+  let query = supabase
+    .from("packages")
+    .select("id", { count: "exact", head: true })
+    .eq("agency_id", agencyId)
+    .eq("status", "published")
+
+  if (excludingPackageId) query = query.neq("id", excludingPackageId)
+
+  const { count } = await query
+  return { allowed: (count ?? 0) < limit, limit, count: count ?? 0 }
+}
+
 export async function createAgencyPackage(input: PackageInput) {
   const supabase = await createSupabaseServerClient()
   const {
@@ -48,6 +77,13 @@ export async function createAgencyPackage(input: PackageInput) {
 
   if (!title || !destination || !description) {
     return { ok: false, message: "Preencha título, destino e descrição." }
+  }
+
+  if (input.status === "published") {
+    const limit = await getPackageLimitState(supabase, agency.id)
+    if (!limit.allowed) {
+      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+    }
   }
 
   const { error } = await supabase.from("packages").insert({
@@ -108,6 +144,13 @@ export async function updateAgencyPackage(packageId: string, input: PackageInput
     return { ok: false, message: "Preencha título, destino e descrição." }
   }
 
+  if (input.status === "published") {
+    const limit = await getPackageLimitState(supabase, agencyId, packageId)
+    if (!limit.allowed) {
+      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+    }
+  }
+
   const { error } = await supabase
     .from("packages")
     .update({
@@ -137,6 +180,13 @@ export async function setAgencyPackageStatus(packageId: string, status: "draft" 
 
   if (!agencyId) {
     return { ok: false, message: agencyError }
+  }
+
+  if (status === "published") {
+    const limit = await getPackageLimitState(supabase, agencyId, packageId)
+    if (!limit.allowed) {
+      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+    }
   }
 
   const { error } = await supabase

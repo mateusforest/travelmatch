@@ -384,3 +384,93 @@ export async function setReviewHidden(reviewId: string, hidden: boolean) {
   revalidatePath("/master/moderacao")
   return { ok: true }
 }
+
+export async function setAgencySubscriptionPlan(input: {
+  agencyId: string
+  planSlug: "free" | "pro" | "premium"
+  status?: "trial" | "active" | "canceled" | "expired" | "suspended"
+  expiresAt?: string | null
+}) {
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
+  if (!ok) return { ok: false, message }
+
+  const { data: plan } = await supabase
+    .from("subscription_plans")
+    .select("id,slug,name")
+    .eq("slug", input.planSlug)
+    .maybeSingle()
+
+  if (!plan) return { ok: false, message: "Plano nao encontrado." }
+
+  await supabase
+    .from("agency_subscriptions")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("agency_id", input.agencyId)
+    .in("status", ["trial", "active"])
+
+  const { error } = await supabase.from("agency_subscriptions").insert({
+    agency_id: input.agencyId,
+    plan_id: plan.id,
+    status: input.status ?? "active",
+    expires_at: input.expiresAt || null,
+  })
+
+  if (error) return { ok: false, message: error.message }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: "agency_subscription_updated",
+    entityType: "agency",
+    entityId: input.agencyId,
+    newData: { planSlug: input.planSlug, status: input.status ?? "active" },
+  })
+
+  revalidatePath("/master/financeiro")
+  revalidatePath("/master/agencias")
+  return { ok: true }
+}
+
+export async function createAgencyPromotion(input: {
+  agencyId: string
+  type: "featured_7" | "featured_15" | "featured_30" | "boost"
+  startsAt?: string | null
+  endsAt?: string | null
+  status?: "pending" | "active" | "completed" | "canceled"
+  amount: number
+  campaignStatus?: "pending" | "scheduled" | "running" | "completed" | "canceled" | null
+  campaignNotes?: string | null
+  campaignReportUrl?: string | null
+}) {
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
+  if (!ok) return { ok: false, message }
+
+  const { data, error } = await supabase
+    .from("agency_promotions")
+    .insert({
+      agency_id: input.agencyId,
+      type: input.type,
+      starts_at: input.startsAt || null,
+      ends_at: input.endsAt || null,
+      status: input.status ?? "pending",
+      amount: input.amount,
+      campaign_status: input.type === "boost" ? input.campaignStatus ?? "pending" : null,
+      campaign_notes: input.campaignNotes?.trim() || null,
+      campaign_report_url: input.campaignReportUrl?.trim() || null,
+    })
+    .select("id")
+    .single()
+
+  if (error) return { ok: false, message: error.message }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: "agency_promotion_created",
+    entityType: "promotion",
+    entityId: data.id,
+    newData: input,
+  })
+
+  revalidatePath("/")
+  revalidatePath("/master/financeiro")
+  return { ok: true }
+}

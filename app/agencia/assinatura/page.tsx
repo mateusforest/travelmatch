@@ -1,46 +1,11 @@
 import { Check, CreditCard, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
+import { getAgencyBillingData } from "@/lib/data/billing"
 
-const plans = [
-  {
-    name: "Essencial",
-    price: "Grátis",
-    current: true,
-    features: [
-      "Até 3 pacotes publicados",
-      "Perfil público",
-      "Recebimento de leads",
-      "Suporte por e-mail",
-    ],
-  },
-  {
-    name: "Profissional",
-    price: "R$ 149",
-    period: "/mês",
-    highlight: true,
-    features: [
-      "Pacotes ilimitados",
-      "Destaque no Match",
-      "Analytics avançado",
-      "COS ilimitado",
-      "Suporte prioritário",
-    ],
-  },
-  {
-    name: "Premium",
-    price: "R$ 349",
-    period: "/mês",
-    features: [
-      "Tudo do Profissional",
-      "Posição premium no marketplace",
-      "Gerente de conta dedicado",
-      "Integrações personalizadas",
-    ],
-  },
-]
+export default async function AssinaturaPage() {
+  const billing = await getAgencyBillingData()
 
-export default function AssinaturaPage() {
   return (
     <>
       <PageHeader
@@ -48,7 +13,6 @@ export default function AssinaturaPage() {
         description="Gerencie seu plano, recursos e pagamento."
       />
 
-      {/* Current plan */}
       <SectionCard title="Plano atual" className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -56,9 +20,12 @@ export default function AssinaturaPage() {
               <Sparkles className="h-5 w-5 text-primary" />
             </span>
             <div>
-              <p className="font-semibold text-foreground">Essencial</p>
+              <p className="font-semibold text-foreground">{billing.planName}</p>
               <p className="text-sm text-muted-foreground">
-                Plano gratuito — ideal para começar
+                Status: {billing.status} · Renovacao: {billing.renewalDate}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Pacotes: {billing.packageUsage} · Analytics: {billing.analyticsLevel}
               </p>
             </div>
           </div>
@@ -68,16 +35,15 @@ export default function AssinaturaPage() {
         </div>
       </SectionCard>
 
-      {/* Plans */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {plans.map((plan) => (
+        {billing.plans.map((plan) => (
           <div
-            key={plan.name}
+            key={plan.slug}
             className={`relative rounded-2xl border bg-card p-6 shadow-sm shadow-black/[0.03] ${
-              plan.highlight ? "border-primary/40 shadow-lg shadow-primary/10" : "border-border"
+              plan.slug === "pro" ? "border-primary/40 shadow-lg shadow-primary/10" : "border-border"
             }`}
           >
-            {plan.highlight && (
+            {plan.slug === "pro" && (
               <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
                 Recomendado
               </span>
@@ -87,27 +53,22 @@ export default function AssinaturaPage() {
               <span className="text-3xl font-bold tracking-tight text-foreground">
                 {plan.price}
               </span>
-              {plan.period && (
-                <span className="pb-1 text-sm text-muted-foreground">
-                  {plan.period}
-                </span>
+              {plan.slug !== "free" && (
+                <span className="pb-1 text-sm text-muted-foreground">/mes</span>
               )}
             </div>
             <ul className="mt-5 space-y-2.5">
-              {plan.features.map((f) => (
-                <li
-                  key={f}
-                  className="flex items-start gap-2 text-sm text-foreground/90"
-                >
+              {[plan.packageLimit, `Analytics ${plan.analyticsLevel}`, "Perfil publico", "Leads e reputacao"].map((feature) => (
+                <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  {f}
+                  {feature}
                 </li>
               ))}
             </ul>
             <Button
-              variant={plan.highlight ? "default" : "outline"}
+              variant={plan.slug === "pro" ? "default" : "outline"}
               className={`mt-6 w-full rounded-full ${
-                plan.highlight
+                plan.slug === "pro"
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "border-border hover:border-primary/40"
               }`}
@@ -119,14 +80,12 @@ export default function AssinaturaPage() {
         ))}
       </div>
 
-      {/* Payment */}
       <SectionCard title="Pagamento" className="mt-6">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-secondary">
             <CreditCard className="h-5 w-5" />
           </span>
-          Nenhum método de pagamento cadastrado. Adicione um ao fazer upgrade
-          para um plano pago.
+          Checkout preparado para Stripe e Mercado Pago. A finalizacao entra na Etapa 11.
         </div>
       </SectionCard>
     </>

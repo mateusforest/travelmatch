@@ -36,7 +36,11 @@ type PackageRow = {
   price_from: number | null
   duration_days: number | null
   featured: boolean
-  agency_profiles: { agency_name: string; status: string }[] | null
+  agency_profiles: {
+    agency_name: string
+    status: string
+    agency_subscriptions?: { status: string; subscription_plans?: { priority_level: number }[] | null }[] | null
+  }[] | null
   travel_categories: { name: string; slug: string }[] | null
   package_views?: { count: number }[]
   traveler_leads?: { count: number }[]
@@ -61,7 +65,7 @@ export function ResultsSection({ query }: { query?: string }) {
 
     let request = supabase
       .from("packages")
-      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status),travel_categories(name,slug),package_views(count),traveler_leads(count)")
+      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status,agency_subscriptions(status,subscription_plans(priority_level))),travel_categories(name,slug),package_views(count),traveler_leads(count)")
       .eq("status", "published")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false })
@@ -110,6 +114,7 @@ export function ResultsSection({ query }: { query?: string }) {
                   views: b.package_views?.[0]?.count ?? 0,
                   leads: b.traveler_leads?.[0]?.count ?? 0,
                   reputationScore: b.agency_id ? reputationByAgency.get(b.agency_id) ?? 0 : 0,
+                  priorityLevel: b.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
                 },
                 { query: term },
                 settings,
@@ -126,6 +131,7 @@ export function ResultsSection({ query }: { query?: string }) {
                   views: a.package_views?.[0]?.count ?? 0,
                   leads: a.traveler_leads?.[0]?.count ?? 0,
                   reputationScore: a.agency_id ? reputationByAgency.get(a.agency_id) ?? 0 : 0,
+                  priorityLevel: a.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
                 },
                 { query: term },
                 settings,
@@ -154,6 +160,7 @@ export function ResultsSection({ query }: { query?: string }) {
               views: pkg.package_views?.[0]?.count ?? 0,
               leads: pkg.traveler_leads?.[0]?.count ?? 0,
               reputationScore: pkg.agency_id ? reputationByAgency.get(pkg.agency_id) ?? 0 : 0,
+              priorityLevel: pkg.agency_profiles?.[0]?.agency_subscriptions?.find((sub) => (sub as { status?: string }).status === "active")?.subscription_plans?.[0]?.priority_level ?? 0,
             },
             { query: term },
             settings,

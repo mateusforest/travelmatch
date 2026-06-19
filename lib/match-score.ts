@@ -20,6 +20,7 @@ export type MatchPackageInput = {
   views: number
   leads: number
   reputationScore?: number | null
+  priorityLevel?: number | null
 }
 
 export type MatchSearchInput = {
@@ -91,6 +92,10 @@ export function calculateMatchScore(
 
   if (score > 0 && pkg.reputationScore) {
     score += Math.round((pkg.reputationScore / 100) * settings.reputation_weight)
+  }
+
+  if (score > 0 && pkg.priorityLevel) {
+    score += Math.min(5, pkg.priorityLevel)
   }
 
   if (!term && !search.categorySlug) {
