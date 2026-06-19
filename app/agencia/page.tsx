@@ -1,4 +1,4 @@
-import Link from "next/link"
+﻿import Link from "next/link"
 import {
   Package,
   Inbox,
@@ -17,24 +17,24 @@ import {
 } from "@/components/agencia/ui-bits"
 import { getAgencyDashboardData } from "@/lib/data/agency"
 
-// Sugestões do COS (assistente operacional) — conteúdo de produto, gerado em tempo real.
-// Plataforma 0km: sem mocks. As recomendações surgirão conforme houver dados da agência.
+// SugestÃµes do COS (assistente operacional) â€” conteÃºdo de produto, gerado em tempo real.
+// Plataforma 0km: sem mocks. As recomendaÃ§Ãµes surgirÃ£o conforme houver dados da agÃªncia.
 const cosSuggestions: string[] = []
 
 export default async function AgenciaDashboardPage() {
   const dashboard = await getAgencyDashboardData()
   const stats = [
     { icon: Package, label: "Pacotes ativos", value: String(dashboard.activePackages), hint: "publicados" },
-    { icon: Inbox, label: "Leads recebidos", value: String(dashboard.leadsLast30Days), hint: "últimos 30 dias" },
-    { icon: Eye, label: "Visualizações", value: String(dashboard.viewsLast30Days), hint: "últimos 30 dias" },
-    { icon: TrendingUp, label: "Taxa de conversão", value: dashboard.conversionRate, hint: "média" },
+    { icon: Inbox, label: "Leads recebidos", value: String(dashboard.leadsLast30Days), hint: "Ãºltimos 30 dias" },
+    { icon: Eye, label: "VisualizaÃ§Ãµes", value: String(dashboard.viewsLast30Days), hint: "Ãºltimos 30 dias" },
+    { icon: TrendingUp, label: "Taxa de conversÃ£o", value: dashboard.conversionRate, hint: "mÃ©dia" },
   ]
 
   return (
     <>
       <PageHeader
-        title="Visão geral"
-        description="Acompanhe a operação da sua agência em um só lugar."
+        title="VisÃ£o geral"
+        description="Acompanhe a operaÃ§Ã£o da sua agÃªncia em um sÃ³ lugar."
         action={
           <Button
             asChild
@@ -64,7 +64,7 @@ export default async function AgenciaDashboardPage() {
       {/* Two columns */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SectionCard
-          title="Últimos leads"
+          title="Ãšltimos leads"
           action={
             <Link
               href="/agencia/leads"
@@ -77,7 +77,7 @@ export default async function AgenciaDashboardPage() {
           <EmptyState
             icon={Inbox}
             title="Nenhum lead ainda"
-            description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerão aqui."
+            description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerÃ£o aqui."
           />
         </SectionCard>
 
@@ -92,23 +92,43 @@ export default async function AgenciaDashboardPage() {
             </Link>
           }
         >
-          <EmptyState
-            icon={Package}
-            title="Publique seu primeiro pacote"
-            description="Pacotes publicados aparecem para viajantes compatíveis via Match inteligente."
-            action={
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-full border-border hover:border-primary/40"
-              >
-                <Link href="/agencia/pacotes/novo">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar pacote
-                </Link>
-              </Button>
-            }
-          />
+          {dashboard.topViewedPackages.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="Publique seu primeiro pacote"
+              description="Pacotes publicados aparecem para viajantes compatíveis via Match inteligente."
+              action={
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-full border-border hover:border-primary/40"
+                >
+                  <Link href="/agencia/pacotes/novo">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar pacote
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <ul className="flex flex-col">
+              {dashboard.topViewedPackages.map((pkg) => (
+                <li
+                  key={pkg.id}
+                  className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0 last:pb-0 first:pt-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{pkg.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{pkg.destination}</p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p className="font-semibold text-foreground">{pkg.views}</p>
+                    <p>views</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </SectionCard>
       </div>
 
@@ -119,13 +139,13 @@ export default async function AgenciaDashboardPage() {
             <Sparkles className="h-[18px] w-[18px] text-primary" />
           </span>
           <h2 className="text-base font-semibold text-foreground">
-            Sugestões do COS
+            SugestÃµes do COS
           </h2>
         </div>
         {cosSuggestions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card/70 p-4 text-sm leading-relaxed text-muted-foreground">
-            Conforme sua agência publicar pacotes e receber leads, o COS trará
-            recomendações personalizadas para melhorar sua performance aqui.
+            Conforme sua agÃªncia publicar pacotes e receber leads, o COS trarÃ¡
+            recomendaÃ§Ãµes personalizadas para melhorar sua performance aqui.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

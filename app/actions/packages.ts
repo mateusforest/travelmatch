@@ -14,6 +14,7 @@ export type PackageInput = {
   durationDays: string
   status: "draft" | "published"
   imageUrl?: string
+  galleryImages?: string[]
 }
 
 function numberFromText(value: string) {
@@ -86,7 +87,7 @@ export async function createAgencyPackage(input: PackageInput) {
     }
   }
 
-  const { error } = await supabase.from("packages").insert({
+  const { data: createdPackage, error } = await supabase.from("packages").insert({
     agency_id: agency.id,
     title,
     slug: slugify(`${title}-${Date.now()}`),
@@ -97,10 +98,22 @@ export async function createAgencyPackage(input: PackageInput) {
     duration_days: numberFromText(input.durationDays),
     status: input.status,
     image_url: input.imageUrl?.trim() || null,
-  })
+  }).select("id").single()
 
   if (error) {
     return { ok: false, message: error.message }
+  }
+
+  const galleryImages = (input.galleryImages ?? []).filter(Boolean).slice(0, 15)
+  if (createdPackage?.id && galleryImages.length > 0) {
+    await supabase.from("package_gallery_images").insert(
+      galleryImages.map((imageUrl, index) => ({
+        package_id: createdPackage.id,
+        agency_id: agency.id,
+        image_url: imageUrl,
+        position: index,
+      })),
+    )
   }
 
   redirect("/agencia/pacotes")
@@ -170,6 +183,21 @@ export async function updateAgencyPackage(packageId: string, input: PackageInput
     return { ok: false, message: error.message }
   }
 
+  if (input.galleryImages) {
+    const galleryImages = input.galleryImages.filter(Boolean).slice(0, 15)
+    await supabase.from("package_gallery_images").delete().eq("package_id", packageId).eq("agency_id", agencyId)
+    if (galleryImages.length > 0) {
+      await supabase.from("package_gallery_images").insert(
+        galleryImages.map((imageUrl, index) => ({
+          package_id: packageId,
+          agency_id: agencyId,
+          image_url: imageUrl,
+          position: index,
+        })),
+      )
+    }
+  }
+
   revalidatePath("/agencia/pacotes")
   revalidatePath(`/agencia/pacotes/${packageId}`)
   redirect("/agencia/pacotes")
@@ -236,7 +264,7 @@ export async function uploadPackageImage(packageId: string, formData: FormData) 
   }
 
   const ext = file.name.split(".").pop() || "png"
-  const path = `package-images/${user.id}/${packageId}-${Date.now()}.${ext}`
+  const path = `package-images/${user.id}/${packageId}/${Date.now()}.${ext}`
   const { error: uploadError } = await supabase.storage
     .from("travelmatch-images")
     .upload(path, file, { upsert: true, contentType: file.type })
@@ -256,9 +284,40 @@ export async function uploadPackageImage(packageId: string, formData: FormData) 
     return { ok: false, message: error.message }
   }
 
+  await supabase.from("package_gallery_images").insert({
+    package_id: packageId,
+    agency_id: agencyId,
+    image_url: data.publicUrl,
+    storage_path: path,
+    position: 0,
+  })
+
   revalidatePath("/agencia/pacotes")
   revalidatePath(`/agencia/pacotes/${packageId}`)
   return { ok: true, url: data.publicUrl }
+}
+
+export async function removePackageGalleryImage(packageId: string, imageUrl: string) {
+  const { supabase, agencyId, error: agencyError } = await getAgencyIdForCurrentUser()
+
+  if (!agencyId) {
+    return { ok: false, message: agencyError }
+  }
+
+  const { error } = await supabase
+    .from("package_gallery_images")
+    .delete()
+    .eq("package_id", packageId)
+    .eq("agency_id", agencyId)
+    .eq("image_url", imageUrl)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath(`/agencia/pacotes/${packageId}`)
+  revalidatePath(`/agencia/pacotes/${packageId}/editar`)
+  return { ok: true }
 }
 
 export async function uploadPackageDraftImage(formData: FormData) {

@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { updateAgencyProfile, uploadAgencyBanner, uploadAgencyLogo } from "@/app/actions/profile"
 import type { AgencyProfileData } from "@/lib/data/agency"
+import { citySuggestions } from "@/lib/travel-suggestions"
 
 const allSpecialties = [
   "Europa",
@@ -236,7 +237,13 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                     placeholder="Sua cidade"
                     className="mt-1.5"
                     autoComplete="address-level2"
+                    list="agency-cities"
                   />
+                  <datalist id="agency-cities">
+                    {citySuggestions.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <Label htmlFor="state">Estado</Label>
@@ -315,10 +322,16 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
               Pré-visualização
             </p>
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03]">
-              <div className="h-24 bg-gradient-to-r from-primary/30 to-primary/10" />
+              <div
+                className="h-24 bg-gradient-to-r from-primary/30 to-primary/10 bg-cover bg-center"
+                style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}
+              />
               <div className="px-5 pb-5">
-                <div className="-mt-8 mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card bg-primary/10">
-                  <Store className="h-7 w-7 text-primary" />
+                <div
+                  className="-mt-8 mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card bg-primary/10 bg-cover bg-center"
+                  style={logoUrl ? { backgroundImage: `url(${logoUrl})` } : undefined}
+                >
+                  {!logoUrl && <Store className="h-7 w-7 text-primary" />}
                 </div>
                 <h3 className="text-lg font-semibold text-foreground">
                   {name || "Nome da agência"}

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
-import { calculateMatchScore, defaultMatchSettings, type MatchSettings } from "@/lib/match-score"
+import { calculateMatchScore, defaultMatchSettings, normalizeSearchText, type MatchSettings } from "@/lib/match-score"
 import { createTravelerLead, registerCtaEvent, registerWhatsAppClick } from "@/app/actions/public"
 
 type Package = {
@@ -69,13 +69,9 @@ export function ResultsSection({ query }: { query?: string }) {
       .eq("status", "published")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(30)
+      .limit(100)
 
     const term = query?.trim()
-    if (term) {
-      const safeTerm = term.replace(/[%,()]/g, " ")
-      request = request.or(`destination.ilike.%${safeTerm}%,title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`)
-    }
 
     Promise.all([request, settingsRequest])
       .then(async ([{ data, error }, { data: settingsData }]) => {
@@ -85,8 +81,19 @@ export function ResultsSection({ query }: { query?: string }) {
         }
 
         const settings = (settingsData ?? defaultMatchSettings) as MatchSettings
+        const normalizedTerm = normalizeSearchText(term)
         const activePackages = ((data ?? []) as PackageRow[]).filter(
           (pkg) => pkg.agency_profiles?.[0]?.status === "active",
+        ).filter((pkg) =>
+          !normalizedTerm ||
+          [
+            pkg.title,
+            pkg.destination,
+            pkg.description,
+            pkg.travel_categories?.[0]?.name,
+            pkg.travel_categories?.[0]?.slug,
+            pkg.agency_profiles?.[0]?.agency_name,
+          ].some((value) => normalizeSearchText(value).includes(normalizedTerm)),
         )
         const agencyIds = Array.from(new Set(activePackages.map((pkg) => pkg.agency_id).filter(Boolean))) as string[]
         const reputationEntries = await Promise.all(

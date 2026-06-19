@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Search, ArrowRight, Sparkles, MapPin, Globe, Heart, Users, Ship, Tag, X } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { destinationSuggestions } from "@/lib/travel-suggestions"
 
 const quickCategories = [
   { label: "Disney", icon: Sparkles },
@@ -65,7 +66,8 @@ export function HeroSection({ variant = "initial", query, setQuery, onSearch, on
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Para onde você quer ir?"
-                  className="flex-1 py-3.5 pr-3 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none text-base"
+                    list="travelmatch-destinations"
+                    className="flex-1 py-3.5 pr-3 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none text-base"
                 />
                 {query && (
                   <button
@@ -119,6 +121,7 @@ export function HeroSection({ variant = "initial", query, setQuery, onSearch, on
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Para onde você quer ir?"
+                    list="travelmatch-destinations"
                     className="flex-1 py-4 pr-3 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none text-base"
                   />
                   <div className="pr-2">
@@ -184,6 +187,13 @@ export function HeroSection({ variant = "initial", query, setQuery, onSearch, on
           </div>
         )}
       </div>
+      <datalist id="travelmatch-destinations">
+        {destinationSuggestions.map((item) => (
+          <option key={item} value={item} />
+        ))}
+      </datalist>
     </section>
   )
 }
+
+

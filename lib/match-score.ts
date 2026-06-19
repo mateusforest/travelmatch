@@ -42,10 +42,15 @@ export const defaultMatchSettings: MatchSettings = {
   reputation_weight: 10,
 }
 
-const normalize = (value?: string | null) => value?.trim().toLowerCase() ?? ""
+export const normalizeSearchText = (value?: string | null) =>
+  value
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase() ?? ""
 
 function includesTerm(value: string | null | undefined, term: string) {
-  return term.length > 0 && normalize(value).includes(term)
+  return term.length > 0 && normalizeSearchText(value).includes(term)
 }
 
 export function calculateMatchScore(
@@ -53,7 +58,7 @@ export function calculateMatchScore(
   search: MatchSearchInput,
   settings: MatchSettings = defaultMatchSettings,
 ) {
-  const term = normalize(search.query)
+  const term = normalizeSearchText(search.query)
   let score = 0
 
   if (term) {
@@ -65,7 +70,7 @@ export function calculateMatchScore(
     }
   }
 
-  if (search.categorySlug && normalize(pkg.categorySlug) === normalize(search.categorySlug)) {
+  if (search.categorySlug && normalizeSearchText(pkg.categorySlug) === normalizeSearchText(search.categorySlug)) {
     score += settings.category_weight
   }
 

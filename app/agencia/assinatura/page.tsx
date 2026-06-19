@@ -10,9 +10,8 @@ const promotionOptions = [
     title: "Destaque 7 dias",
     price: "R$ 97,00",
     includes: [
-      "Destaque na landing por 7 dias",
-      "Prioridade na seção de agências em destaque",
-      "Identificação como conteúdo promovido",
+      "Destaque na landing",
+      "Destaque na busca",
     ],
   },
   {
@@ -20,9 +19,9 @@ const promotionOptions = [
     title: "Destaque 15 dias",
     price: "R$ 197,00",
     includes: [
-      "Destaque na landing por 15 dias",
-      "Prioridade na seção de agências em destaque",
-      "Identificação como conteúdo promovido",
+      "Destaque na landing",
+      "Destaque na busca",
+      "Prioridade adicional",
     ],
   },
   {
@@ -30,9 +29,9 @@ const promotionOptions = [
     title: "Destaque 30 dias",
     price: "R$ 497,00",
     includes: [
-      "Destaque na landing por 30 dias",
-      "Prioridade na seção de agências em destaque",
-      "Identificação como conteúdo promovido",
+      "Destaque na landing",
+      "Destaque na busca",
+      "Prioridade máxima",
     ],
   },
   {
@@ -40,15 +39,20 @@ const promotionOptions = [
     title: "TravelMatch Boost",
     price: "R$ 987,00",
     includes: [
-      "Destaque na landing",
+      "Destaque premium",
       "Postagem dedicada no Instagram TravelMatch",
-      "Stories dedicados",
-      "Campanha patrocinada",
-      "Verba de mídia inclusa",
-      "Relatório de desempenho",
+      "Anúncio dedicado",
+      "Tráfego pago incluso",
+      "Relatório da campanha",
     ],
   },
 ] as const
+
+const planBenefits: Record<string, string[]> = {
+  free: ["3 pacotes", "Perfil público", "Recebimento de leads", "Avaliações", "Match básico"],
+  pro: ["30 pacotes", "Analytics completos", "Perfil público avançado", "Avaliações", "Match avançado", "Leads ilimitados"],
+  premium: ["Pacotes ilimitados", "Analytics avançados", "Perfil público avançado", "Match prioritário", "Leads ilimitados", "Prioridade em destaque orgânico"],
+}
 
 export default async function AssinaturaPage() {
   const billing = await getAgencyBillingData()
@@ -111,7 +115,7 @@ export default async function AssinaturaPage() {
               )}
             </div>
             <ul className="mt-5 space-y-2.5">
-              {[plan.packageLimit, `Analytics ${plan.analyticsLevel}`, "Perfil publico", "Leads e reputacao"].map((feature) => (
+              {(planBenefits[plan.slug] ?? [plan.packageLimit, `Analytics ${plan.analyticsLevel}`, "Perfil publico", "Leads e reputacao"]).map((feature) => (
                 <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   {feature}

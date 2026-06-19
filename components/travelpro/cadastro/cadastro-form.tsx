@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { signUpAgency } from "@/app/actions/auth"
+import { citySuggestions } from "@/lib/travel-suggestions"
 
 const estados = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
@@ -140,7 +141,13 @@ export function CadastroForm() {
             onChange={(e) => update("cidade", e.target.value)}
             placeholder="Sua cidade"
             autoComplete="address-level2"
+            list="signup-cities"
           />
+          <datalist id="signup-cities">
+            {citySuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
         </div>
         <div className="space-y-2">
           <Label htmlFor="estado">Estado</Label>

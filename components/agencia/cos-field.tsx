@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Sparkles, ArrowUp } from "lucide-react"
+import Link from "next/link"
+import { ArrowUp, Sparkles } from "lucide-react"
 
 const suggestions = [
-  "Criar pacote",
-  "Melhorar anúncio",
-  "Ver desempenho",
-  "Responder lead",
-  "Gerar descrição",
+  { label: "Criar pacote", href: "/agencia/pacotes/novo" },
+  { label: "Meus leads", href: "/agencia/leads" },
+  { label: "Analytics", href: "/agencia/analytics" },
+  { label: "Meu perfil", href: "/agencia/perfil" },
+  { label: "Assinatura", href: "/agencia/assinatura" },
+  { label: "Pacotes em destaque", href: "/agencia/pacotes" },
+  { label: "Gerar descrição", href: "/agencia/pacotes/novo" },
+  { label: "Ver desempenho", href: "/agencia/analytics" },
 ]
 
 export function CosField({ compact = false }: { compact?: boolean }) {
@@ -16,9 +20,9 @@ export function CosField({ compact = false }: { compact?: boolean }) {
   const [focused, setFocused] = useState(false)
 
   return (
-    <div className="w-full">
+    <div className="relative w-full">
       <form
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={(event) => event.preventDefault()}
         className={`group relative flex items-center gap-2 rounded-full border bg-card transition-all duration-300 ${
           focused
             ? "border-primary/50 shadow-lg shadow-primary/10 ring-2 ring-primary/10"
@@ -31,10 +35,10 @@ export function CosField({ compact = false }: { compact?: boolean }) {
         <input
           type="text"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(event) => setValue(event.target.value)}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder="Como posso ajudar sua agência hoje?"
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+          placeholder="Fale com o COS"
           aria-label="Fale com o COS"
           className={`flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/80 focus:outline-none ${
             compact ? "text-sm" : "text-[15px]"
@@ -51,16 +55,32 @@ export function CosField({ compact = false }: { compact?: boolean }) {
         </button>
       </form>
 
+      {focused && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            {suggestions.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!compact && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {suggestions.map((s) => (
+          {suggestions.map((item) => (
             <button
-              key={s}
+              key={item.label}
               type="button"
-              onClick={() => setValue(s)}
+              onClick={() => setValue(item.label)}
               className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
             >
-              {s}
+              {item.label}
             </button>
           ))}
         </div>

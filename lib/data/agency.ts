@@ -37,6 +37,7 @@ type PackageRow = {
   duration_days?: number | null
   status: string
   image_url: string | null
+  package_gallery_images?: { image_url: string; position: number }[] | null
   featured: boolean
   created_at?: string
   updated_at?: string
@@ -138,6 +139,13 @@ export type AgencyDashboardData = {
   reviewCount: number
   recommendationRate: number
   unansweredAlerts: number
+  topViewedPackages: {
+    id: string
+    title: string
+    destination: string
+    views: number
+    leads: number
+  }[]
 }
 
 export type AgencyProfileData = AgencyProfile
@@ -152,6 +160,7 @@ export type AgencyPackageDetails = {
   price_from: number | null
   duration_days: number | null
   image_url: string | null
+  gallery_images: string[]
   status: "draft" | "published" | "archived"
   featured: boolean
   created_at: string
@@ -229,6 +238,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       reviewCount: 0,
       recommendationRate: 0,
       unansweredAlerts: 0,
+      topViewedPackages: [],
     }
   }
 
@@ -316,6 +326,23 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       return lead.status === "new" ? hours > 24 : hours > 72
     }).length
 
+  const { data: topPackagesData } = await supabase
+    .from("packages")
+    .select("id,title,destination,traveler_leads(count),package_views(count)")
+    .eq("agency_id", agency.id)
+    .eq("status", "published")
+
+  const topViewedPackages = ((topPackagesData ?? []) as PackageRow[])
+    .map((pkg) => ({
+      id: pkg.id,
+      title: pkg.title,
+      destination: pkg.destination,
+      views: pkg.package_views?.[0]?.count ?? 0,
+      leads: pkg.traveler_leads?.[0]?.count ?? 0,
+    }))
+    .sort((a, b) => b.views - a.views || b.leads - a.leads || a.title.localeCompare(b.title))
+    .slice(0, 5)
+
   const sourceCounts = new Map<string, number>()
   for (const lead of (leadSourcesData ?? []) as { source: string | null; source_page: string | null }[]) {
     const source = lead.source || lead.source_page || "Nao informado"
@@ -339,6 +366,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     reviewCount: Number(reputation?.review_count ?? 0),
     recommendationRate: Number(reputation?.recommendation_rate ?? 0),
     unansweredAlerts,
+    topViewedPackages,
   }
 }
 
@@ -385,7 +413,7 @@ export async function getAgencyPackageDetails(
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("packages")
-    .select("id,title,destination,category_id,description,price_from,duration_days,image_url,status,featured,created_at,updated_at,travel_categories(name)")
+    .select("id,title,destination,category_id,description,price_from,duration_days,image_url,status,featured,created_at,updated_at,travel_categories(name),package_gallery_images(image_url,position)")
     .eq("id", packageId)
     .eq("agency_id", agency.id)
     .maybeSingle()
@@ -410,6 +438,9 @@ export async function getAgencyPackageDetails(
     price_from: pkg.price_from,
     duration_days: pkg.duration_days ?? null,
     image_url: pkg.image_url,
+    gallery_images: (pkg.package_gallery_images ?? [])
+      .sort((a, b) => a.position - b.position)
+      .map((image) => image.image_url),
     status: pkg.status as AgencyPackageDetails["status"],
     featured: pkg.featured,
     created_at: pkg.created_at ?? "",

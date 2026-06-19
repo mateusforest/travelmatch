@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createTravelerLead } from "@/app/actions/public"
+import { destinationSuggestions } from "@/lib/travel-suggestions"
 
 type LeadFormProps = {
   packageId?: string | null
@@ -124,7 +125,13 @@ export function LeadForm({
             onChange={(e) => setDesiredDestination(e.target.value)}
             className="mt-1.5"
             autoComplete="address-level2"
+            list="lead-destinations"
           />
+          <datalist id="lead-destinations">
+            {destinationSuggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
