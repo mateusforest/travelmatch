@@ -10,7 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
 import { calculateMatchScore, defaultMatchSettings, type MatchSettings } from "@/lib/match-score"
-import { createTravelerLead, registerCtaEvent } from "@/app/actions/public"
+import { createTravelerLead, registerCtaEvent, registerWhatsAppClick } from "@/app/actions/public"
 
 type Package = {
   id: string
@@ -176,6 +176,12 @@ export function ResultsSection({ query }: { query?: string }) {
       category_slug: pkg.categorySlug,
       message,
       source: "search_results",
+      source_page: query ? `/?busca=${query}` : "/",
+      cta_label: "WhatsApp",
+    })
+    void registerWhatsAppClick({
+      package_id: pkg.id,
+      agency_id: pkg.agencyId,
       source_page: query ? `/?busca=${query}` : "/",
       cta_label: "WhatsApp",
     })

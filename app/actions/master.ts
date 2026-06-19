@@ -345,3 +345,42 @@ export async function updateReputationSettings(input: {
   revalidatePath("/master/configuracoes")
   return { ok: true }
 }
+
+export async function setReviewHidden(reviewId: string, hidden: boolean) {
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
+
+  if (!ok) {
+    return { ok: false, message }
+  }
+
+  const { data: oldData } = await supabase
+    .from("agency_reviews")
+    .select("id,hidden,rating,comment,would_recommend")
+    .eq("id", reviewId)
+    .maybeSingle()
+
+  const { error } = await supabase
+    .from("agency_reviews")
+    .update({
+      hidden,
+      moderated_at: new Date().toISOString(),
+      moderated_by: masterUserId,
+    })
+    .eq("id", reviewId)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: hidden ? "review_hidden" : "review_shown",
+    entityType: "review",
+    entityId: reviewId,
+    oldData,
+    newData: { hidden },
+  })
+
+  revalidatePath("/master/moderacao")
+  return { ok: true }
+}

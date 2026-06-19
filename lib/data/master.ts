@@ -121,6 +121,24 @@ export type MasterAuditLog = {
   createdAt: string
 }
 
+export type MasterReviewModerationItem = {
+  id: string
+  agency: string
+  leadId: string
+  rating: number
+  comment: string
+  wouldRecommend: boolean
+  hidden: boolean
+  createdAt: string
+}
+
+export type UnansweredLeadAlert = {
+  id: string
+  agency: string
+  status: string
+  createdAt: string
+}
+
 export type MasterCommercialAnalyticsData = {
   indicators: {
     visitors: number
@@ -534,4 +552,73 @@ export async function getMasterCommercialAnalyticsData(period?: string | null, f
         ? (reviewRows.reduce((total, review) => total + review.rating, 0) / reviewRows.length).toFixed(1)
         : "0.0",
   }
+}
+
+export async function getMasterReviewModerationItems(): Promise<MasterReviewModerationItem[]> {
+  const isMaster = await requireMaster()
+  if (!isMaster) return []
+
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from("agency_reviews")
+    .select("id,lead_id,rating,comment,would_recommend,hidden,created_at,agency_profiles(agency_name)")
+    .order("created_at", { ascending: false })
+    .limit(30)
+
+  if (error) return []
+
+  return ((data ?? []) as {
+    id: string
+    lead_id: string
+    rating: number
+    comment: string | null
+    would_recommend: boolean
+    hidden: boolean
+    created_at: string
+    agency_profiles?: { agency_name: string }[] | null
+  }[]).map((review) => ({
+    id: review.id,
+    agency: review.agency_profiles?.[0]?.agency_name ?? "Agencia",
+    leadId: review.lead_id,
+    rating: review.rating,
+    comment: review.comment ?? "Sem comentario",
+    wouldRecommend: review.would_recommend,
+    hidden: review.hidden,
+    createdAt: new Date(review.created_at).toLocaleDateString("pt-BR"),
+  }))
+}
+
+export async function getMasterUnansweredLeadAlerts(): Promise<UnansweredLeadAlert[]> {
+  const isMaster = await requireMaster()
+  if (!isMaster) return []
+
+  const supabase = await createSupabaseServerClient()
+  const now = Date.now()
+  const { data, error } = await supabase
+    .from("traveler_leads")
+    .select("id,status,created_at,last_contact_at,agency_profiles(agency_name)")
+    .in("status", ["new", "contacted"])
+    .order("created_at", { ascending: true })
+    .limit(50)
+
+  if (error) return []
+
+  return ((data ?? []) as {
+    id: string
+    status: string
+    created_at: string
+    last_contact_at: string | null
+    agency_profiles?: { agency_name: string }[] | null
+  }[])
+    .filter((lead) => {
+      const reference = lead.last_contact_at ?? lead.created_at
+      const hours = (now - new Date(reference).getTime()) / 36e5
+      return lead.status === "new" ? hours > 24 : hours > 72
+    })
+    .map((lead) => ({
+      id: lead.id,
+      agency: lead.agency_profiles?.[0]?.agency_name ?? "Agencia",
+      status: lead.status,
+      createdAt: new Date(lead.created_at).toLocaleDateString("pt-BR"),
+    }))
 }

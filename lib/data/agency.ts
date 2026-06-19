@@ -136,6 +136,7 @@ export type AgencyDashboardData = {
   averageRating: number
   reviewCount: number
   recommendationRate: number
+  unansweredAlerts: number
 }
 
 export type AgencyProfileData = AgencyProfile
@@ -226,6 +227,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       averageRating: 0,
       reviewCount: 0,
       recommendationRate: 0,
+      unansweredAlerts: 0,
     }
   }
 
@@ -300,6 +302,18 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     target_agency_id: agency.id,
   })
   const reputation = Array.isArray(reputationData) ? reputationData[0] : null
+  const { data: openLeads } = await supabase
+    .from("traveler_leads")
+    .select("status,created_at,last_contact_at")
+    .eq("agency_id", agency.id)
+    .in("status", ["new", "contacted"])
+  const now = Date.now()
+  const unansweredAlerts = ((openLeads ?? []) as { status: string; created_at: string; last_contact_at: string | null }[])
+    .filter((lead) => {
+      const reference = lead.last_contact_at ?? lead.created_at
+      const hours = (now - new Date(reference).getTime()) / 36e5
+      return lead.status === "new" ? hours > 24 : hours > 72
+    }).length
 
   const sourceCounts = new Map<string, number>()
   for (const lead of (leadSourcesData ?? []) as { source: string | null; source_page: string | null }[]) {
@@ -323,6 +337,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     averageRating: Number(reputation?.average_rating ?? 0),
     reviewCount: Number(reputation?.review_count ?? 0),
     recommendationRate: Number(reputation?.recommendation_rate ?? 0),
+    unansweredAlerts,
   }
 }
 

@@ -144,6 +144,7 @@ export async function registerAgencyProfileView(agencyId: string) {
 }
 
 export async function registerCtaEvent(input: {
+  lead_id?: string | null
   package_id?: string | null
   agency_id?: string | null
   event_type: string
@@ -156,6 +157,7 @@ export async function registerCtaEvent(input: {
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.from("cta_events").insert({
+    lead_id: input.lead_id || null,
     package_id: input.package_id || null,
     agency_id: input.agency_id || null,
     event_type: input.event_type.trim(),
@@ -166,7 +168,38 @@ export async function registerCtaEvent(input: {
   return { ok: !error }
 }
 
+export async function registerWhatsAppClick(input: {
+  lead_id?: string | null
+  package_id?: string | null
+  agency_id?: string | null
+  source_page?: string | null
+  cta_label?: string | null
+}) {
+  const result = await registerCtaEvent({
+    ...input,
+    event_type: "whatsapp_click",
+    cta_label: input.cta_label ?? "WhatsApp",
+  })
+
+  if (!result.ok || !input.lead_id || !input.agency_id || !hasSupabaseEnv()) {
+    return result
+  }
+
+  const supabase = await createSupabaseServerClient()
+  await supabase.from("lead_timeline_events").insert({
+    lead_id: input.lead_id,
+    agency_id: input.agency_id,
+    event_type: "whatsapp_click",
+    title: "Clique em WhatsApp",
+    description: input.source_page ?? null,
+    metadata: { cta_label: input.cta_label ?? "WhatsApp" },
+  })
+
+  return result
+}
+
 export async function createAgencyReview(input: {
+  token?: string | null
   agency_id: string
   lead_id: string
   rating: number
@@ -183,6 +216,25 @@ export async function createAgencyReview(input: {
   }
 
   const supabase = await createSupabaseServerClient()
+  if (input.token) {
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("review_tokens")
+      .select("id,lead_id,agency_id,expires_at,used_at")
+      .eq("token", input.token)
+      .maybeSingle()
+
+    if (
+      tokenError ||
+      !tokenData ||
+      tokenData.used_at ||
+      new Date(tokenData.expires_at).getTime() <= Date.now() ||
+      tokenData.lead_id !== input.lead_id ||
+      tokenData.agency_id !== input.agency_id
+    ) {
+      return { ok: false, message: "Token de avaliacao invalido." }
+    }
+  }
+
   const { error } = await supabase.from("agency_reviews").insert({
     agency_id: input.agency_id,
     lead_id: input.lead_id,
@@ -193,6 +245,14 @@ export async function createAgencyReview(input: {
 
   if (error) {
     return { ok: false, message: error.message }
+  }
+
+  if (input.token) {
+    await supabase
+      .from("review_tokens")
+      .update({ used_at: new Date().toISOString() })
+      .eq("token", input.token)
+      .is("used_at", null)
   }
 
   return { ok: true }

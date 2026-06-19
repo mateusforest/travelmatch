@@ -55,6 +55,12 @@ export default async function AgenciaDashboardPage() {
         ))}
       </div>
 
+      {dashboard.unansweredAlerts > 0 && (
+        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 text-sm text-foreground">
+          {dashboard.unansweredAlerts} lead(s) sem resposta dentro da regra operacional.
+        </div>
+      )}
+
       {/* Two columns */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SectionCard
