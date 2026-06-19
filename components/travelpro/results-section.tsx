@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
+import { calculateMatchScore, defaultMatchSettings, type MatchSettings } from "@/lib/match-score"
 import { createTravelerLead, registerCtaEvent } from "@/app/actions/public"
 
 type Package = {
@@ -37,24 +38,9 @@ type PackageRow = {
   featured: boolean
   agency_profiles: { agency_name: string; status: string }[] | null
   travel_categories: { name: string; slug: string }[] | null
+  package_views?: { count: number }[]
+  traveler_leads?: { count: number }[]
   agency_id: string | null
-}
-
-function compatibilityScore(pkg: PackageRow, term: string) {
-  if (!term) {
-    return pkg.featured ? 10 : 0
-  }
-
-  const normalizedTerm = term.toLowerCase()
-  let score = pkg.featured ? 20 : 0
-
-  if (pkg.destination.toLowerCase().includes(normalizedTerm)) score += 50
-  if (pkg.title.toLowerCase().includes(normalizedTerm)) score += 35
-  if ((pkg.travel_categories?.[0]?.slug ?? "").toLowerCase().includes(normalizedTerm)) score += 25
-  if ((pkg.travel_categories?.[0]?.name ?? "").toLowerCase().includes(normalizedTerm)) score += 25
-  if (pkg.description.toLowerCase().includes(normalizedTerm)) score += 15
-
-  return score
 }
 
 export function ResultsSection({ query }: { query?: string }) {
@@ -67,9 +53,15 @@ export function ResultsSection({ query }: { query?: string }) {
     }
 
     const supabase = createSupabaseBrowserClient()
+    const settingsRequest = supabase
+      .from("match_settings")
+      .select("destination_weight,category_weight,budget_weight,date_weight,travelers_weight,featured_bonus,performance_bonus")
+      .limit(1)
+      .maybeSingle()
+
     let request = supabase
       .from("packages")
-      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status),travel_categories(name,slug)")
+      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status),travel_categories(name,slug),package_views(count),traveler_leads(count)")
       .eq("status", "published")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false })
@@ -81,18 +73,51 @@ export function ResultsSection({ query }: { query?: string }) {
       request = request.or(`destination.ilike.%${safeTerm}%,title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`)
     }
 
-    request
-      .then(({ data, error }) => {
+    Promise.all([request, settingsRequest])
+      .then(([{ data, error }, { data: settingsData }]) => {
         if (error) {
           setPackages([])
           return
         }
 
+        const settings = (settingsData ?? defaultMatchSettings) as MatchSettings
         const activePackages = ((data ?? []) as PackageRow[]).filter(
           (pkg) => pkg.agency_profiles?.[0]?.status === "active",
         )
         const next = activePackages
-          .sort((a, b) => compatibilityScore(b, term ?? "") - compatibilityScore(a, term ?? ""))
+          .sort(
+            (a, b) =>
+              calculateMatchScore(
+                {
+                  title: b.title,
+                  destination: b.destination,
+                  description: b.description,
+                  categorySlug: b.travel_categories?.[0]?.slug,
+                  categoryName: b.travel_categories?.[0]?.name,
+                  priceFrom: b.price_from,
+                  featured: b.featured,
+                  views: b.package_views?.[0]?.count ?? 0,
+                  leads: b.traveler_leads?.[0]?.count ?? 0,
+                },
+                { query: term },
+                settings,
+              ) -
+              calculateMatchScore(
+                {
+                  title: a.title,
+                  destination: a.destination,
+                  description: a.description,
+                  categorySlug: a.travel_categories?.[0]?.slug,
+                  categoryName: a.travel_categories?.[0]?.name,
+                  priceFrom: a.price_from,
+                  featured: a.featured,
+                  views: a.package_views?.[0]?.count ?? 0,
+                  leads: a.traveler_leads?.[0]?.count ?? 0,
+                },
+                { query: term },
+                settings,
+              ),
+          )
           .slice(0, 8)
           .map((pkg) => ({
           id: pkg.id,
@@ -104,7 +129,21 @@ export function ResultsSection({ query }: { query?: string }) {
           categorySlug: pkg.travel_categories?.[0]?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
           duration: pkg.duration_days ? `${pkg.duration_days} dias` : "Sob consulta",
-          match: Math.min(compatibilityScore(pkg, term ?? ""), 100),
+          match: calculateMatchScore(
+            {
+              title: pkg.title,
+              destination: pkg.destination,
+              description: pkg.description,
+              categorySlug: pkg.travel_categories?.[0]?.slug,
+              categoryName: pkg.travel_categories?.[0]?.name,
+              priceFrom: pkg.price_from,
+              featured: pkg.featured,
+              views: pkg.package_views?.[0]?.count ?? 0,
+              leads: pkg.traveler_leads?.[0]?.count ?? 0,
+            },
+            { query: term },
+            settings,
+          ),
           tags: [pkg.travel_categories?.[0]?.name].filter(Boolean) as string[],
         }))
         setPackages(next)

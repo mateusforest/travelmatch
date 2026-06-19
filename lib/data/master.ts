@@ -120,6 +120,22 @@ export type MasterAuditLog = {
   createdAt: string
 }
 
+export type MasterCommercialAnalyticsData = {
+  indicators: {
+    visitors: number
+    sessions: number
+    clicks: number
+    leads: number
+    conversionRate: string
+  }
+  eventsByType: { name: string; value: string }[]
+  leadsBySource: { name: string; value: string }[]
+  topClickedPackages: { name: string; value: string }[]
+  topLeadPackages: { name: string; value: string }[]
+  agenciesByConversion: { name: string; value: string }[]
+  pagesByConversion: { name: string; value: string }[]
+}
+
 async function requireMaster() {
   if (!hasSupabaseEnv()) {
     return false
@@ -403,4 +419,82 @@ export async function getMasterAuditLogs(limit = 8): Promise<MasterAuditLog[]> {
     entityId: log.entity_id ?? "sem entidade",
     createdAt: new Date(log.created_at).toLocaleDateString("pt-BR"),
   }))
+}
+
+export async function getMasterCommercialAnalyticsData(): Promise<MasterCommercialAnalyticsData> {
+  const isMaster = await requireMaster()
+
+  if (!isMaster) {
+    return {
+      indicators: { visitors: 0, sessions: 0, clicks: 0, leads: 0, conversionRate: "0%" },
+      eventsByType: [],
+      leadsBySource: [],
+      topClickedPackages: [],
+      topLeadPackages: [],
+      agenciesByConversion: [],
+      pagesByConversion: [],
+    }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const [
+    { count: packageViews },
+    { count: profileViews },
+    { data: events },
+    { data: leads },
+    { data: packages },
+    { data: agencies },
+  ] = await Promise.all([
+    supabase.from("package_views").select("id", { count: "exact", head: true }),
+    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }),
+    supabase.from("cta_events").select("event_type,source_page,package_id"),
+    supabase.from("traveler_leads").select("status,source,source_page,agency_id,package_id"),
+    supabase.from("packages").select("id,title,package_views(count),traveler_leads(count)"),
+    supabase.from("agency_profiles").select("id,agency_name,traveler_leads(status)"),
+  ])
+
+  const eventRows = (events ?? []) as { event_type: string; source_page: string | null; package_id: string | null }[]
+  const leadRows = (leads ?? []) as { status: string; source: string | null; source_page: string | null; agency_id: string | null; package_id: string | null }[]
+  const packageRows = (packages ?? []) as { id: string; title: string; package_views?: { count: number }[]; traveler_leads?: { count: number }[] }[]
+  const agencyRows = (agencies ?? []) as { id: string; agency_name: string; traveler_leads?: { status: string }[] }[]
+  const wonLeads = leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length
+  const countBy = (items: string[]) => {
+    const map = new Map<string, number>()
+    for (const item of items) map.set(item, (map.get(item) ?? 0) + 1)
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value: String(value) }))
+  }
+
+  return {
+    indicators: {
+      visitors: (packageViews ?? 0) + (profileViews ?? 0),
+      sessions: (packageViews ?? 0) + (profileViews ?? 0),
+      clicks: eventRows.length,
+      leads: leadRows.length,
+      conversionRate: leadRows.length > 0 ? `${Math.round((wonLeads / leadRows.length) * 100)}%` : "0%",
+    },
+    eventsByType: countBy(eventRows.map((event) => event.event_type)),
+    leadsBySource: countBy(leadRows.map((lead) => lead.source ?? "Nao informado")),
+    topClickedPackages: packageRows
+      .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
+      .filter((item) => item.value !== "0")
+      .slice(0, 6),
+    topLeadPackages: packageRows
+      .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
+      .filter((item) => item.value !== "0")
+      .slice(0, 6),
+    agenciesByConversion: agencyRows
+      .map((agency) => {
+        const agencyLeads = agency.traveler_leads ?? []
+        const agencyWon = agencyLeads.filter((lead) => lead.status === "won" || lead.status === "converted").length
+        const rate = agencyLeads.length > 0 ? Math.round((agencyWon / agencyLeads.length) * 100) : 0
+        return { name: agency.agency_name, value: `${rate}%` }
+      })
+      .filter((item) => item.value !== "0%")
+      .slice(0, 6),
+    pagesByConversion: countBy(
+      leadRows
+        .filter((lead) => lead.status === "won" || lead.status === "converted")
+        .map((lead) => lead.source_page ?? "Nao informado"),
+    ),
+  }
 }

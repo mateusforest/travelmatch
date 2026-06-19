@@ -65,6 +65,14 @@ type LeadRow = {
   packages?: { title: string; destination: string }[] | null
 }
 
+type LeadTimelineRow = {
+  id: string
+  event_type: string
+  title: string
+  description: string | null
+  created_at: string
+}
+
 export type AgencyLead = {
   id: string
   name: string
@@ -86,6 +94,32 @@ export type AgencyLead = {
   notes: string
   lastContactAt: string
   packageTitle: string
+}
+
+export type AgencyLeadDetails = AgencyLead & {
+  agencyName: string
+  timeline: {
+    id: string
+    type: string
+    title: string
+    description: string
+    date: string
+  }[]
+}
+
+export type AgencyAnalyticsData = {
+  stats: {
+    views: number
+    clicks: number
+    leads: number
+    conversions: number
+  }
+  ctaEvents: { name: string; value: string }[]
+  leadSources: { name: string; value: string }[]
+  topClickedPackages: { name: string; value: string }[]
+  topLeadPackages: { name: string; value: string }[]
+  conversionsByPage: { name: string; value: string }[]
+  leadsByStatus: { name: string; value: string }[]
 }
 
 export type AgencyDashboardData = {
@@ -374,7 +408,116 @@ export async function getAgencyLeads(): Promise<AgencyLead[]> {
     throw new Error(error.message)
   }
 
-  return ((data ?? []) as LeadRow[]).map((lead) => ({
+  return ((data ?? []) as LeadRow[]).map(mapLeadRow)
+}
+
+export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDetails | null> {
+  const agency = await getAuthenticatedAgency()
+
+  if (!agency) {
+    return null
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const [{ data: lead, error }, { data: timeline, error: timelineError }] = await Promise.all([
+    supabase
+      .from("traveler_leads")
+      .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination)")
+      .eq("id", leadId)
+      .eq("agency_id", agency.id)
+      .maybeSingle(),
+    supabase
+      .from("lead_timeline_events")
+      .select("id,event_type,title,description,created_at")
+      .eq("lead_id", leadId)
+      .eq("agency_id", agency.id)
+      .order("created_at", { ascending: false }),
+  ])
+
+  if (error || timelineError) {
+    throw new Error(error?.message ?? timelineError?.message ?? "Erro ao carregar lead.")
+  }
+
+  if (!lead) {
+    return null
+  }
+
+  return {
+    ...mapLeadRow(lead as LeadRow),
+    agencyName: agency.agency_name,
+    timeline: ((timeline ?? []) as LeadTimelineRow[]).map((event) => ({
+      id: event.id,
+      type: event.event_type,
+      title: event.title,
+      description: event.description ?? "",
+      date: formatDateBR(event.created_at),
+    })),
+  }
+}
+
+export async function getAgencyAnalyticsData(): Promise<AgencyAnalyticsData> {
+  const agency = await getAuthenticatedAgency()
+
+  if (!agency) {
+    return {
+      stats: { views: 0, clicks: 0, leads: 0, conversions: 0 },
+      ctaEvents: [],
+      leadSources: [],
+      topClickedPackages: [],
+      topLeadPackages: [],
+      conversionsByPage: [],
+      leadsByStatus: [],
+    }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const [
+    { count: packageViews },
+    { count: profileViews },
+    { data: ctaEvents },
+    { data: leads },
+    { data: packages },
+  ] = await Promise.all([
+    supabase.from("package_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
+    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
+    supabase.from("cta_events").select("event_type,source_page,package_id").eq("agency_id", agency.id),
+    supabase.from("traveler_leads").select("status,source,source_page,package_id").eq("agency_id", agency.id),
+    supabase.from("packages").select("id,title,traveler_leads(count),package_views(count)").eq("agency_id", agency.id),
+  ])
+
+  const leadRows = (leads ?? []) as { status: string; source: string | null; source_page: string | null; package_id: string | null }[]
+  const eventRows = (ctaEvents ?? []) as { event_type: string; source_page: string | null; package_id: string | null }[]
+  const packageRows = (packages ?? []) as { id: string; title: string; traveler_leads?: { count: number }[]; package_views?: { count: number }[] }[]
+  const countBy = (items: string[]) => {
+    const map = new Map<string, number>()
+    for (const item of items) map.set(item, (map.get(item) ?? 0) + 1)
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value: String(value) }))
+  }
+
+  return {
+    stats: {
+      views: (packageViews ?? 0) + (profileViews ?? 0),
+      clicks: eventRows.length,
+      leads: leadRows.length,
+      conversions: leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length,
+    },
+    ctaEvents: countBy(eventRows.map((event) => event.event_type)),
+    leadSources: countBy(leadRows.map((lead) => lead.source ?? "Nao informado")),
+    topClickedPackages: packageRows
+      .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
+      .filter((item) => item.value !== "0")
+      .slice(0, 6),
+    topLeadPackages: packageRows
+      .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
+      .filter((item) => item.value !== "0")
+      .slice(0, 6),
+    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => lead.source_page ?? "Nao informado")),
+    leadsByStatus: countBy(leadRows.map((lead) => leadStatusMap[lead.status] ?? lead.status)),
+  }
+}
+
+function mapLeadRow(lead: LeadRow): AgencyLead {
+  return {
     id: lead.id,
     name: lead.traveler_name ?? "Viajante",
     email: lead.traveler_email ?? "Nao informado",
@@ -395,7 +538,7 @@ export async function getAgencyLeads(): Promise<AgencyLead[]> {
     notes: lead.notes ?? "",
     lastContactAt: lead.last_contact_at ? formatDateBR(lead.last_contact_at) : "Nao informado",
     packageTitle: lead.packages?.[0]?.title ?? "Sem pacote vinculado",
-  }))
+  }
 }
 
 export async function getActiveCategories() {

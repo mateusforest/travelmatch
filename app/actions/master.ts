@@ -241,3 +241,57 @@ export async function updateAgencyFeatureSettings(
   revalidatePath("/master/agencias")
   return { ok: true }
 }
+
+export async function updateMatchSettings(input: {
+  id?: string | null
+  destination_weight: number
+  category_weight: number
+  budget_weight: number
+  date_weight: number
+  travelers_weight: number
+  featured_bonus: number
+  performance_bonus: number
+}) {
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
+
+  if (!ok) {
+    return { ok: false, message }
+  }
+
+  const { data: existing } = await supabase
+    .from("match_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle()
+
+  const payload = {
+    destination_weight: Number(input.destination_weight) || 0,
+    category_weight: Number(input.category_weight) || 0,
+    budget_weight: Number(input.budget_weight) || 0,
+    date_weight: Number(input.date_weight) || 0,
+    travelers_weight: Number(input.travelers_weight) || 0,
+    featured_bonus: Number(input.featured_bonus) || 0,
+    performance_bonus: Number(input.performance_bonus) || 0,
+  }
+
+  const { error } = existing
+    ? await supabase.from("match_settings").update(payload).eq("id", existing.id)
+    : await supabase.from("match_settings").insert(payload)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: "match_settings_updated",
+    entityType: "match_settings",
+    entityId: existing?.id ?? null,
+    oldData: existing,
+    newData: payload,
+  })
+
+  revalidatePath("/")
+  revalidatePath("/master/configuracoes")
+  return { ok: true }
+}

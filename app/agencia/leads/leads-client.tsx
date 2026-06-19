@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import { Inbox } from "lucide-react"
 import { updateAgencyLead } from "@/app/actions/leads"
 import { EmptyState } from "@/components/agencia/ui-bits"
@@ -120,6 +121,12 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
       >
         {open ? "Ocultar detalhe" : "Ver detalhe"}
       </button>
+      <Link
+        href={`/agencia/leads/${lead.id}`}
+        className="mt-2 text-sm font-medium text-primary hover:underline"
+      >
+        Abrir pagina do lead
+      </Link>
       {open && (
         <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
           <div className="grid grid-cols-1 gap-2 text-muted-foreground">

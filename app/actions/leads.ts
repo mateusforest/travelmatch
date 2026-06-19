@@ -74,3 +74,63 @@ export async function updateAgencyLead(
   revalidatePath("/agencia/leads")
   return { ok: true }
 }
+
+export async function addAgencyLeadTimelineEvent(
+  leadId: string,
+  input: {
+    title: string
+    description?: string | null
+  },
+) {
+  const title = input.title.trim()
+
+  if (!title) {
+    return { ok: false, message: "Informe um titulo." }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, message: "Sessao expirada." }
+  }
+
+  const { data: agency } = await supabase
+    .from("agency_profiles")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (!agency) {
+    return { ok: false, message: "Agencia nao encontrada." }
+  }
+
+  const { data: lead } = await supabase
+    .from("traveler_leads")
+    .select("id")
+    .eq("id", leadId)
+    .eq("agency_id", agency.id)
+    .maybeSingle()
+
+  if (!lead) {
+    return { ok: false, message: "Lead nao encontrado." }
+  }
+
+  const { error } = await supabase.from("lead_timeline_events").insert({
+    lead_id: leadId,
+    agency_id: agency.id,
+    event_type: "manual",
+    title,
+    description: input.description?.trim() || null,
+    created_by: user.id,
+  })
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath(`/agencia/leads/${leadId}`)
+  return { ok: true }
+}

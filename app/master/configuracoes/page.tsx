@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Tag, MapPin, Layers, Search, FileText, Plus, X } from "lucide-react"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { updateMatchSettings } from "@/app/actions/master"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { defaultMatchSettings, type MatchSettings } from "@/lib/match-score"
 
 const sections = [
   { key: "categorias", label: "Categorias", icon: Tag },
@@ -14,6 +17,7 @@ const sections = [
   { key: "planos", label: "Planos", icon: Layers },
   { key: "seo", label: "SEO", icon: Search },
   { key: "conteudo", label: "Conteúdo institucional", icon: FileText },
+  { key: "match", label: "Match", icon: Search },
 ]
 
 function TagEditor({ initial }: { initial: string[] }) {
@@ -64,6 +68,24 @@ function TagEditor({ initial }: { initial: string[] }) {
 
 export default function MasterConfiguracoesPage() {
   const [active, setActive] = useState("categorias")
+  const [matchSettings, setMatchSettings] = useState<MatchSettings>(defaultMatchSettings)
+  const [matchFeedback, setMatchFeedback] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient()
+    void supabase
+      .from("match_settings")
+      .select("destination_weight,category_weight,budget_weight,date_weight,travelers_weight,featured_bonus,performance_bonus")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setMatchSettings(data as MatchSettings)
+      })
+  }, [])
+
+  const setMatchValue = (key: keyof MatchSettings, value: string) => {
+    setMatchSettings((current) => ({ ...current, [key]: Number(value) || 0 }))
+  }
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -189,6 +211,36 @@ export default function MasterConfiguracoesPage() {
                     Salvar alterações
                   </Button>
                 </div>
+              </div>
+            </SectionCard>
+          )}
+          {active === "match" && (
+            <SectionCard title="Pesos do match">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {Object.entries(matchSettings).map(([key, value]) => (
+                  <div key={key}>
+                    <Label htmlFor={key}>{key}</Label>
+                    <Input
+                      id={key}
+                      type="number"
+                      value={value}
+                      onChange={(event) => setMatchValue(key as keyof MatchSettings, event.target.value)}
+                      className="mt-1.5 h-11 rounded-xl"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <Button
+                  className="w-fit rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={async () => {
+                    const result = await updateMatchSettings(matchSettings)
+                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Nao foi possivel salvar.")
+                  }}
+                >
+                  Salvar pesos
+                </Button>
+                {matchFeedback && <p className="text-sm text-muted-foreground">{matchFeedback}</p>}
               </div>
             </SectionCard>
           )}
