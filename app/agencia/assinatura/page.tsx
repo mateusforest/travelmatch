@@ -1,5 +1,5 @@
 import { Check, CreditCard, Sparkles } from "lucide-react"
-import { checkoutPromotion, checkoutSubscription } from "@/app/actions/billing"
+import { cancelAgencySubscription, checkoutPromotion, checkoutSubscription } from "@/app/actions/billing"
 import { Button } from "@/components/ui/button"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { getAgencyBillingData } from "@/lib/data/billing"
@@ -147,11 +147,26 @@ export default async function AssinaturaPage() {
       </div>
 
       <SectionCard title="Pagamento" className="mt-6">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-secondary">
-            <CreditCard className="h-5 w-5" />
-          </span>
-          Checkout Stripe ativo para planos e produtos patrocinados.
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-secondary">
+              <CreditCard className="h-5 w-5" />
+            </span>
+            <span>
+              Checkout Stripe ativo. Status do plano: {billing.status} · Renovacao: {billing.renewalDate}
+            </span>
+          </div>
+          {billing.planSlug !== "free" && billing.status !== "canceled" && (
+            <form action={cancelAgencySubscription}>
+              <Button
+                type="submit"
+                variant="outline"
+                className="rounded-full border-border hover:border-primary/40"
+              >
+                Cancelar plano
+              </Button>
+            </form>
+          )}
         </div>
       </SectionCard>
 

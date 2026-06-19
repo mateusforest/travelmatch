@@ -1,6 +1,7 @@
 "use server"
 
 import { randomUUID } from "crypto"
+import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createCheckoutIntentPayload } from "@/lib/payments"
 import { createStripeCheckoutSession } from "@/lib/stripe"
@@ -137,4 +138,20 @@ export async function checkoutPromotion(type: PromotionType) {
   }
 
   redirect(session.checkoutUrl)
+}
+
+export async function cancelAgencySubscription() {
+  const { supabase, agencyId } = await requireAgency()
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from("agency_subscriptions")
+    .update({ status: "canceled", canceled_at: now })
+    .eq("agency_id", agencyId)
+    .in("status", ["trial", "active"])
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  revalidatePath("/agencia/assinatura")
 }
