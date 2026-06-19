@@ -56,6 +56,9 @@ export default async function PublicAgencyPage({
                   </p>
                 )}
                 <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    Nota {agency.average_rating.toFixed(1)} · {agency.review_count} avaliacoes · {agency.recommendation_rate}% recomendam
+                  </span>
                   {agency.website && (
                     <span className="inline-flex items-center gap-1.5">
                       <Globe className="h-4 w-4 text-primary" />

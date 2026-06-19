@@ -6,6 +6,7 @@ export type MatchSettings = {
   travelers_weight: number
   featured_bonus: number
   performance_bonus: number
+  reputation_weight: number
 }
 
 export type MatchPackageInput = {
@@ -18,6 +19,7 @@ export type MatchPackageInput = {
   featured: boolean
   views: number
   leads: number
+  reputationScore?: number | null
 }
 
 export type MatchSearchInput = {
@@ -36,6 +38,7 @@ export const defaultMatchSettings: MatchSettings = {
   travelers_weight: 5,
   featured_bonus: 10,
   performance_bonus: 15,
+  reputation_weight: 10,
 }
 
 const normalize = (value?: string | null) => value?.trim().toLowerCase() ?? ""
@@ -85,6 +88,10 @@ export function calculateMatchScore(
 
   const performance = Math.min(settings.performance_bonus, Math.round(pkg.views / 10) + pkg.leads * 2)
   score += performance
+
+  if (score > 0 && pkg.reputationScore) {
+    score += Math.round((pkg.reputationScore / 100) * settings.reputation_weight)
+  }
 
   if (!term && !search.categorySlug) {
     score = (pkg.featured ? settings.featured_bonus : 0) + performance

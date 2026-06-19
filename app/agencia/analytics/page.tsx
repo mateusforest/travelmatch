@@ -9,9 +9,16 @@ import {
 import { PageHeader, SectionCard, StatCard } from "@/components/agencia/ui-bits"
 import { RankingList } from "@/components/master/master-bits"
 import { getAgencyAnalyticsData } from "@/lib/data/agency"
+import { analyticsPeriods } from "@/lib/period"
+import Link from "next/link"
 
-export default async function AnalyticsPage() {
-  const analytics = await getAgencyAnalyticsData()
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>
+}) {
+  const { period, from, to } = await searchParams
+  const analytics = await getAgencyAnalyticsData(period, from, to)
   const stats = [
     { icon: Eye, label: "VisualizaÃ§Ãµes", value: String(analytics.stats.views), hint: "total" },
     { icon: MousePointerClick, label: "Cliques", value: String(analytics.stats.clicks), hint: "eventos CTA" },
@@ -24,6 +31,23 @@ export default async function AnalyticsPage() {
       <PageHeader
         title="Analytics"
         description="Entenda como sua agÃªncia estÃ¡ performando no TravelMatch."
+        action={
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1">
+            {analyticsPeriods.map((item) => (
+              <Link
+                key={item.value}
+                href={`/agencia/analytics?period=${item.value}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                  (period ?? "30d") === item.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

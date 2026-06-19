@@ -21,6 +21,9 @@ export type PublicAgency = {
   logo_url: string | null
   website: string | null
   instagram: string | null
+  average_rating: number
+  review_count: number
+  recommendation_rate: number
   packages: PublicPackageCard[]
 }
 
@@ -93,6 +96,10 @@ export async function getPublicAgencyBySlug(slug: string): Promise<PublicAgency 
   }
 
   const agency = data as PublicAgencyRow
+  const { data: reputationData } = await supabase.rpc("get_agency_reputation_summary", {
+    target_agency_id: agency.id,
+  })
+  const reputation = Array.isArray(reputationData) ? reputationData[0] : null
 
   return {
     id: agency.id,
@@ -104,6 +111,9 @@ export async function getPublicAgencyBySlug(slug: string): Promise<PublicAgency 
     logo_url: agency.logo_url,
     website: agency.website,
     instagram: agency.instagram,
+    average_rating: Number(reputation?.average_rating ?? 0),
+    review_count: Number(reputation?.review_count ?? 0),
+    recommendation_rate: Number(reputation?.recommendation_rate ?? 0),
     packages: (agency.packages ?? [])
       .filter((pkg) => pkg.status === "published")
       .map((pkg) => ({

@@ -165,3 +165,35 @@ export async function registerCtaEvent(input: {
 
   return { ok: !error }
 }
+
+export async function createAgencyReview(input: {
+  agency_id: string
+  lead_id: string
+  rating: number
+  comment?: string | null
+  would_recommend: boolean
+}) {
+  if (!hasSupabaseEnv()) {
+    return { ok: false, message: "Supabase nao configurado." }
+  }
+
+  const rating = Number(input.rating)
+  if (!input.agency_id || !input.lead_id || rating < 1 || rating > 5) {
+    return { ok: false, message: "Dados de avaliacao invalidos." }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.from("agency_reviews").insert({
+    agency_id: input.agency_id,
+    lead_id: input.lead_id,
+    rating,
+    comment: input.comment?.trim() || null,
+    would_recommend: input.would_recommend,
+  })
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  return { ok: true }
+}

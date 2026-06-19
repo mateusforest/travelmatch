@@ -251,6 +251,7 @@ export async function updateMatchSettings(input: {
   travelers_weight: number
   featured_bonus: number
   performance_bonus: number
+  reputation_weight?: number
 }) {
   const { supabase, ok, message, masterUserId } = await requireMasterClient()
 
@@ -272,6 +273,7 @@ export async function updateMatchSettings(input: {
     travelers_weight: Number(input.travelers_weight) || 0,
     featured_bonus: Number(input.featured_bonus) || 0,
     performance_bonus: Number(input.performance_bonus) || 0,
+    reputation_weight: Number(input.reputation_weight) || 0,
   }
 
   const { error } = existing
@@ -292,6 +294,54 @@ export async function updateMatchSettings(input: {
   })
 
   revalidatePath("/")
+  revalidatePath("/master/configuracoes")
+  return { ok: true }
+}
+
+export async function updateReputationSettings(input: {
+  reviews_weight: number
+  recommendation_weight: number
+  conversion_weight: number
+  response_time_weight: number
+  service_weight: number
+}) {
+  const { supabase, ok, message, masterUserId } = await requireMasterClient()
+
+  if (!ok) {
+    return { ok: false, message }
+  }
+
+  const { data: existing } = await supabase
+    .from("reputation_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle()
+
+  const payload = {
+    reviews_weight: Number(input.reviews_weight) || 0,
+    recommendation_weight: Number(input.recommendation_weight) || 0,
+    conversion_weight: Number(input.conversion_weight) || 0,
+    response_time_weight: Number(input.response_time_weight) || 0,
+    service_weight: Number(input.service_weight) || 0,
+  }
+
+  const { error } = existing
+    ? await supabase.from("reputation_settings").update(payload).eq("id", existing.id)
+    : await supabase.from("reputation_settings").insert(payload)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  await logMasterAction(supabase, {
+    masterUserId,
+    action: "reputation_settings_updated",
+    entityType: "reputation_settings",
+    entityId: existing?.id ?? null,
+    oldData: existing,
+    newData: payload,
+  })
+
   revalidatePath("/master/configuracoes")
   return { ok: true }
 }

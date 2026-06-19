@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
 import { formatCurrencyBRL, formatDateBR } from "@/lib/format"
 import type { AgencyPackage } from "@/components/agencia/package-card"
+import { getPeriodRange } from "@/lib/period"
 
 type AgencyProfile = {
   id: string
@@ -132,6 +133,9 @@ export type AgencyDashboardData = {
   viewsLast30Days: number
   conversionRate: string
   leadSources: { name: string; value: string }[]
+  averageRating: number
+  reviewCount: number
+  recommendationRate: number
 }
 
 export type AgencyProfileData = AgencyProfile
@@ -219,6 +223,9 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       viewsLast30Days: 0,
       conversionRate: "0%",
       leadSources: [],
+      averageRating: 0,
+      reviewCount: 0,
+      recommendationRate: 0,
     }
   }
 
@@ -289,6 +296,11 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     .eq("agency_id", agency.id)
     .not("source", "is", null)
 
+  const { data: reputationData } = await supabase.rpc("get_agency_reputation_summary", {
+    target_agency_id: agency.id,
+  })
+  const reputation = Array.isArray(reputationData) ? reputationData[0] : null
+
   const sourceCounts = new Map<string, number>()
   for (const lead of (leadSourcesData ?? []) as { source: string | null; source_page: string | null }[]) {
     const source = lead.source || lead.source_page || "Nao informado"
@@ -308,6 +320,9 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       name,
       value: String(value),
     })),
+    averageRating: Number(reputation?.average_rating ?? 0),
+    reviewCount: Number(reputation?.review_count ?? 0),
+    recommendationRate: Number(reputation?.recommendation_rate ?? 0),
   }
 }
 
@@ -455,7 +470,7 @@ export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDe
   }
 }
 
-export async function getAgencyAnalyticsData(): Promise<AgencyAnalyticsData> {
+export async function getAgencyAnalyticsData(period?: string | null, from?: string | null, to?: string | null): Promise<AgencyAnalyticsData> {
   const agency = await getAuthenticatedAgency()
 
   if (!agency) {
@@ -471,6 +486,7 @@ export async function getAgencyAnalyticsData(): Promise<AgencyAnalyticsData> {
   }
 
   const supabase = await createSupabaseServerClient()
+  const range = getPeriodRange(period, from, to)
   const [
     { count: packageViews },
     { count: profileViews },
@@ -478,10 +494,10 @@ export async function getAgencyAnalyticsData(): Promise<AgencyAnalyticsData> {
     { data: leads },
     { data: packages },
   ] = await Promise.all([
-    supabase.from("package_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
-    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
-    supabase.from("cta_events").select("event_type,source_page,package_id").eq("agency_id", agency.id),
-    supabase.from("traveler_leads").select("status,source,source_page,package_id").eq("agency_id", agency.id),
+    supabase.from("package_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("cta_events").select("event_type,source_page,package_id").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("traveler_leads").select("status,source,source_page,package_id").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
     supabase.from("packages").select("id,title,traveler_leads(count),package_views(count)").eq("agency_id", agency.id),
   ])
 

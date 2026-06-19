@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
 import { calculateAgencyFeatureScoreBreakdown } from "@/lib/data/agency-feature-score"
+import { getPeriodRange } from "@/lib/period"
 
 type MasterAgencyRow = {
   id: string
@@ -134,6 +135,9 @@ export type MasterCommercialAnalyticsData = {
   topLeadPackages: { name: string; value: string }[]
   agenciesByConversion: { name: string; value: string }[]
   pagesByConversion: { name: string; value: string }[]
+  reputationRanking: { name: string; value: string }[]
+  worstReputation: { name: string; value: string }[]
+  platformAverageRating: string
 }
 
 async function requireMaster() {
@@ -421,7 +425,7 @@ export async function getMasterAuditLogs(limit = 8): Promise<MasterAuditLog[]> {
   }))
 }
 
-export async function getMasterCommercialAnalyticsData(): Promise<MasterCommercialAnalyticsData> {
+export async function getMasterCommercialAnalyticsData(period?: string | null, from?: string | null, to?: string | null): Promise<MasterCommercialAnalyticsData> {
   const isMaster = await requireMaster()
 
   if (!isMaster) {
@@ -433,10 +437,14 @@ export async function getMasterCommercialAnalyticsData(): Promise<MasterCommerci
       topLeadPackages: [],
       agenciesByConversion: [],
       pagesByConversion: [],
+      reputationRanking: [],
+      worstReputation: [],
+      platformAverageRating: "0.0",
     }
   }
 
   const supabase = await createSupabaseServerClient()
+  const range = getPeriodRange(period, from, to)
   const [
     { count: packageViews },
     { count: profileViews },
@@ -444,19 +452,22 @@ export async function getMasterCommercialAnalyticsData(): Promise<MasterCommerci
     { data: leads },
     { data: packages },
     { data: agencies },
+    { data: reviews },
   ] = await Promise.all([
-    supabase.from("package_views").select("id", { count: "exact", head: true }),
-    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }),
-    supabase.from("cta_events").select("event_type,source_page,package_id"),
-    supabase.from("traveler_leads").select("status,source,source_page,agency_id,package_id"),
+    supabase.from("package_views").select("id", { count: "exact", head: true }).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("cta_events").select("event_type,source_page,package_id").gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("traveler_leads").select("status,source,source_page,agency_id,package_id").gte("created_at", range.from).lte("created_at", range.to),
     supabase.from("packages").select("id,title,package_views(count),traveler_leads(count)"),
     supabase.from("agency_profiles").select("id,agency_name,traveler_leads(status)"),
+    supabase.from("agency_reviews").select("rating,agency_id,agency_profiles(agency_name)").gte("created_at", range.from).lte("created_at", range.to),
   ])
 
   const eventRows = (events ?? []) as { event_type: string; source_page: string | null; package_id: string | null }[]
   const leadRows = (leads ?? []) as { status: string; source: string | null; source_page: string | null; agency_id: string | null; package_id: string | null }[]
   const packageRows = (packages ?? []) as { id: string; title: string; package_views?: { count: number }[]; traveler_leads?: { count: number }[] }[]
   const agencyRows = (agencies ?? []) as { id: string; agency_name: string; traveler_leads?: { status: string }[] }[]
+  const reviewRows = (reviews ?? []) as { rating: number; agency_id: string; agency_profiles?: { agency_name: string }[] | null }[]
   const wonLeads = leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length
   const countBy = (items: string[]) => {
     const map = new Map<string, number>()
@@ -496,5 +507,31 @@ export async function getMasterCommercialAnalyticsData(): Promise<MasterCommerci
         .filter((lead) => lead.status === "won" || lead.status === "converted")
         .map((lead) => lead.source_page ?? "Nao informado"),
     ),
+    reputationRanking: Array.from(
+      reviewRows.reduce((map, review) => {
+        const name = review.agency_profiles?.[0]?.agency_name ?? "Agencia"
+        const current = map.get(name) ?? { total: 0, count: 0 }
+        map.set(name, { total: current.total + review.rating, count: current.count + 1 })
+        return map
+      }, new Map<string, { total: number; count: number }>()),
+    )
+      .map(([name, value]) => ({ name, value: (value.total / value.count).toFixed(1) }))
+      .sort((a, b) => Number(b.value) - Number(a.value))
+      .slice(0, 6),
+    worstReputation: Array.from(
+      reviewRows.reduce((map, review) => {
+        const name = review.agency_profiles?.[0]?.agency_name ?? "Agencia"
+        const current = map.get(name) ?? { total: 0, count: 0 }
+        map.set(name, { total: current.total + review.rating, count: current.count + 1 })
+        return map
+      }, new Map<string, { total: number; count: number }>()),
+    )
+      .map(([name, value]) => ({ name, value: (value.total / value.count).toFixed(1) }))
+      .sort((a, b) => Number(a.value) - Number(b.value))
+      .slice(0, 6),
+    platformAverageRating:
+      reviewRows.length > 0
+        ? (reviewRows.reduce((total, review) => total + review.rating, 0) / reviewRows.length).toFixed(1)
+        : "0.0",
   }
 }

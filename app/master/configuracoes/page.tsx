@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { updateMatchSettings } from "@/app/actions/master"
+import { updateMatchSettings, updateReputationSettings } from "@/app/actions/master"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { defaultMatchSettings, type MatchSettings } from "@/lib/match-score"
+import { defaultReputationSettings, type ReputationSettings } from "@/lib/reputation"
 
 const sections = [
   { key: "categorias", label: "Categorias", icon: Tag },
@@ -69,6 +70,7 @@ function TagEditor({ initial }: { initial: string[] }) {
 export default function MasterConfiguracoesPage() {
   const [active, setActive] = useState("categorias")
   const [matchSettings, setMatchSettings] = useState<MatchSettings>(defaultMatchSettings)
+  const [reputationSettings, setReputationSettings] = useState<ReputationSettings>(defaultReputationSettings)
   const [matchFeedback, setMatchFeedback] = useState<string | null>(null)
 
   useEffect(() => {
@@ -81,10 +83,22 @@ export default function MasterConfiguracoesPage() {
       .then(({ data }) => {
         if (data) setMatchSettings(data as MatchSettings)
       })
+    void supabase
+      .from("reputation_settings")
+      .select("reviews_weight,recommendation_weight,conversion_weight,response_time_weight,service_weight")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setReputationSettings(data as ReputationSettings)
+      })
   }, [])
 
   const setMatchValue = (key: keyof MatchSettings, value: string) => {
     setMatchSettings((current) => ({ ...current, [key]: Number(value) || 0 }))
+  }
+
+  const setReputationValue = (key: keyof ReputationSettings, value: string) => {
+    setReputationSettings((current) => ({ ...current, [key]: Number(value) || 0 }))
   }
 
   return (
@@ -241,6 +255,32 @@ export default function MasterConfiguracoesPage() {
                   Salvar pesos
                 </Button>
                 {matchFeedback && <p className="text-sm text-muted-foreground">{matchFeedback}</p>}
+              </div>
+              <div className="mt-6 border-t border-border pt-4">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Pesos de reputacao</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {Object.entries(reputationSettings).map(([key, value]) => (
+                    <div key={key}>
+                      <Label htmlFor={key}>{key}</Label>
+                      <Input
+                        id={key}
+                        type="number"
+                        value={value}
+                        onChange={(event) => setReputationValue(key as keyof ReputationSettings, event.target.value)}
+                        className="mt-1.5 h-11 rounded-xl"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className="mt-4 w-fit rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={async () => {
+                    const result = await updateReputationSettings(reputationSettings)
+                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Nao foi possivel salvar.")
+                  }}
+                >
+                  Salvar reputacao
+                </Button>
               </div>
             </SectionCard>
           )}

@@ -55,7 +55,7 @@ export function ResultsSection({ query }: { query?: string }) {
     const supabase = createSupabaseBrowserClient()
     const settingsRequest = supabase
       .from("match_settings")
-      .select("destination_weight,category_weight,budget_weight,date_weight,travelers_weight,featured_bonus,performance_bonus")
+      .select("destination_weight,category_weight,budget_weight,date_weight,travelers_weight,featured_bonus,performance_bonus,reputation_weight")
       .limit(1)
       .maybeSingle()
 
@@ -74,7 +74,7 @@ export function ResultsSection({ query }: { query?: string }) {
     }
 
     Promise.all([request, settingsRequest])
-      .then(([{ data, error }, { data: settingsData }]) => {
+      .then(async ([{ data, error }, { data: settingsData }]) => {
         if (error) {
           setPackages([])
           return
@@ -84,6 +84,17 @@ export function ResultsSection({ query }: { query?: string }) {
         const activePackages = ((data ?? []) as PackageRow[]).filter(
           (pkg) => pkg.agency_profiles?.[0]?.status === "active",
         )
+        const agencyIds = Array.from(new Set(activePackages.map((pkg) => pkg.agency_id).filter(Boolean))) as string[]
+        const reputationEntries = await Promise.all(
+          agencyIds.map(async (agencyId) => {
+            const { data: reputation } = await supabase.rpc("get_agency_reputation_summary", {
+              target_agency_id: agencyId,
+            })
+            const row = Array.isArray(reputation) ? reputation[0] : null
+            return [agencyId, row?.reputation_score ?? 0] as const
+          }),
+        )
+        const reputationByAgency = new Map(reputationEntries)
         const next = activePackages
           .sort(
             (a, b) =>
@@ -98,6 +109,7 @@ export function ResultsSection({ query }: { query?: string }) {
                   featured: b.featured,
                   views: b.package_views?.[0]?.count ?? 0,
                   leads: b.traveler_leads?.[0]?.count ?? 0,
+                  reputationScore: b.agency_id ? reputationByAgency.get(b.agency_id) ?? 0 : 0,
                 },
                 { query: term },
                 settings,
@@ -113,6 +125,7 @@ export function ResultsSection({ query }: { query?: string }) {
                   featured: a.featured,
                   views: a.package_views?.[0]?.count ?? 0,
                   leads: a.traveler_leads?.[0]?.count ?? 0,
+                  reputationScore: a.agency_id ? reputationByAgency.get(a.agency_id) ?? 0 : 0,
                 },
                 { query: term },
                 settings,
@@ -140,6 +153,7 @@ export function ResultsSection({ query }: { query?: string }) {
               featured: pkg.featured,
               views: pkg.package_views?.[0]?.count ?? 0,
               leads: pkg.traveler_leads?.[0]?.count ?? 0,
+              reputationScore: pkg.agency_id ? reputationByAgency.get(pkg.agency_id) ?? 0 : 0,
             },
             { query: term },
             settings,

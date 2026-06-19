@@ -14,15 +14,22 @@ import { PageHeader, SectionCard, StatCard } from "@/components/agencia/ui-bits"
 import { RankingList, CosInsights } from "@/components/master/master-bits"
 import { AnalyticsChart } from "@/components/master/analytics-chart"
 import { getMasterCommercialAnalyticsData } from "@/lib/data/master"
+import { analyticsPeriods } from "@/lib/period"
+import Link from "next/link"
 
-export default async function MasterAnalyticsPage() {
-  const analytics = await getMasterCommercialAnalyticsData()
+export default async function MasterAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>
+}) {
+  const { period, from, to } = await searchParams
+  const analytics = await getMasterCommercialAnalyticsData(period, from, to)
   const indicators = [
     { icon: Users, label: "Visitantes", value: String(analytics.indicators.visitors), hint: "Total" },
     { icon: Activity, label: "SessÃµes", value: String(analytics.indicators.sessions), hint: "Views reais" },
     { icon: MousePointerClick, label: "Cliques", value: String(analytics.indicators.clicks), hint: "Eventos CTA" },
     { icon: Inbox, label: "Leads", value: String(analytics.indicators.leads), hint: "Acumulado" },
-    { icon: Percent, label: "ConversÃµes", value: analytics.indicators.conversionRate, hint: "Taxa media" },
+    { icon: Percent, label: "Reputacao media", value: analytics.platformAverageRating, hint: "Avaliacoes" },
   ]
 
   return (
@@ -30,6 +37,23 @@ export default async function MasterAnalyticsPage() {
       <PageHeader
         title="Analytics"
         description="Painel executivo de desempenho e inteligÃªncia de mercado."
+        action={
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-card p-1">
+            {analyticsPeriods.map((item) => (
+              <Link
+                key={item.value}
+                href={`/master/analytics?period=${item.value}`}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                  (period ?? "30d") === item.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -68,6 +92,15 @@ export default async function MasterAnalyticsPage() {
         </SectionCard>
         <SectionCard title="AgÃªncias por conversao" action={<Building2 className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.agenciesByConversion} />
+        </SectionCard>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <SectionCard title="Melhores avaliadas">
+          <RankingList items={analytics.reputationRanking} />
+        </SectionCard>
+        <SectionCard title="Pior desempenho">
+          <RankingList items={analytics.worstReputation} />
         </SectionCard>
       </div>
 
