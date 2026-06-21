@@ -1,19 +1,19 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowUp, Sparkles } from "lucide-react"
 
+
 const suggestions = [
   { label: "Criar pacote", href: "/agencia/pacotes/novo" },
-  { label: "Meus leads", href: "/agencia/leads" },
+  { label: "Ver leads", href: "/agencia/leads" },
   { label: "Analytics", href: "/agencia/analytics" },
-  { label: "Meu perfil", href: "/agencia/perfil" },
+  { label: "Perfil público", href: "/agencia/perfil" },
+  { label: "Promoções", href: "/agencia/assinatura" },
   { label: "Assinatura", href: "/agencia/assinatura" },
-  { label: "Pacotes em destaque", href: "/agencia/pacotes" },
-  { label: "Gerar descrição", href: "/agencia/pacotes/novo" },
-  { label: "Ver desempenho", href: "/agencia/analytics" },
 ]
+
 
 export function CosField({ compact = false }: { compact?: boolean }) {
   const [value, setValue] = useState("")

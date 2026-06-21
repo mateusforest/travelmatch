@@ -400,7 +400,7 @@ export async function setAgencySubscriptionPlan(input: {
     .eq("slug", input.planSlug)
     .maybeSingle()
 
-  if (!plan) return { ok: false, message: "Plano nao encontrado." }
+  if (!plan) return { ok: false, message: "Plano não encontrado." }
 
   await supabase
     .from("agency_subscriptions")

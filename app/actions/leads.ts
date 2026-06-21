@@ -36,7 +36,7 @@ export async function updateAgencyLead(
     .maybeSingle()
 
   if (agencyError || !agency) {
-    return { ok: false, message: "Agencia nao encontrada." }
+    return { ok: false, message: "Agencia não encontrada." }
   }
 
   const update: Record<string, string | null> = {}
@@ -104,7 +104,7 @@ export async function addAgencyLeadTimelineEvent(
     .maybeSingle()
 
   if (!agency) {
-    return { ok: false, message: "Agencia nao encontrada." }
+    return { ok: false, message: "Agencia não encontrada." }
   }
 
   const { data: lead } = await supabase
@@ -115,7 +115,7 @@ export async function addAgencyLeadTimelineEvent(
     .maybeSingle()
 
   if (!lead) {
-    return { ok: false, message: "Lead nao encontrado." }
+    return { ok: false, message: "Lead não encontrado." }
   }
 
   const { error } = await supabase.from("lead_timeline_events").insert({

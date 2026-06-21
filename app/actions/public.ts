@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
+import { calculateMatchScore } from "@/lib/match-score"
 
 type LeadInput = {
   package_id?: string | null
@@ -39,11 +40,12 @@ export async function createTravelerLead(input: LeadInput) {
 
   const supabase = await createSupabaseServerClient()
   let agencyId = input.agency_id?.trim() || null
+  let leadScore = 0
 
   if (input.package_id) {
     const { data: pkg, error } = await supabase
       .from("packages")
-      .select("agency_id")
+      .select("agency_id,title,destination,description,featured,travel_categories(name,slug),package_views(count),traveler_leads(count)")
       .eq("id", input.package_id)
       .eq("status", "published")
       .maybeSingle()
@@ -53,6 +55,23 @@ export async function createTravelerLead(input: LeadInput) {
     }
 
     agencyId = pkg.agency_id
+    const category = Array.isArray(pkg.travel_categories) ? pkg.travel_categories[0] : pkg.travel_categories
+    leadScore = calculateMatchScore(
+      {
+        title: pkg.title ?? "",
+        destination: pkg.destination ?? "",
+        description: pkg.description ?? "",
+        categorySlug: category?.slug,
+        categoryName: category?.name,
+        featured: Boolean(pkg.featured),
+        views: Array.isArray(pkg.package_views) ? pkg.package_views[0]?.count ?? 0 : 0,
+        leads: Array.isArray(pkg.traveler_leads) ? pkg.traveler_leads[0]?.count ?? 0 : 0,
+      },
+      {
+        query: input.desired_destination || input.message || pkg.destination,
+        categorySlug: input.category_slug,
+      },
+    )
   }
 
   const { error } = await supabase.from("traveler_leads").insert({
@@ -70,6 +89,7 @@ export async function createTravelerLead(input: LeadInput) {
     travel_date: input.travel_date?.trim() || null,
     travelers_count: input.travelers_count || null,
     budget_range: input.budget_range?.trim() || null,
+    lead_score: leadScore,
     status: "new",
   })
 
@@ -207,12 +227,12 @@ export async function createAgencyReview(input: {
   would_recommend: boolean
 }) {
   if (!hasSupabaseEnv()) {
-    return { ok: false, message: "Supabase nao configurado." }
+    return { ok: false, message: "Supabase não configurado." }
   }
 
   const rating = Number(input.rating)
   if (!input.agency_id || !input.lead_id || rating < 1 || rating > 5) {
-    return { ok: false, message: "Dados de avaliacao invalidos." }
+    return { ok: false, message: "Dados de avaliação invalidos." }
   }
 
   const supabase = await createSupabaseServerClient()
@@ -231,7 +251,7 @@ export async function createAgencyReview(input: {
       tokenData.lead_id !== input.lead_id ||
       tokenData.agency_id !== input.agency_id
     ) {
-      return { ok: false, message: "Token de avaliacao invalido." }
+      return { ok: false, message: "Token de avaliação invalido." }
     }
   }
 

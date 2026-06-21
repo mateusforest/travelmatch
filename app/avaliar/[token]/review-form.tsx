@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useTransition } from "react"
 import { Star } from "lucide-react"
@@ -33,7 +33,7 @@ export function ReviewForm({
         comment,
         would_recommend: wouldRecommend,
       })
-      setFeedback(result.ok ? "Avaliacao enviada. Obrigado!" : result.message ?? "Nao foi possivel enviar.")
+      setFeedback(result.ok ? "Avaliação enviada. Obrigado!" : result.message ?? "Não foi possivel enviar.")
     })
   }
 
@@ -79,9 +79,10 @@ export function ReviewForm({
         disabled={pending}
         className="mt-5 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
       >
-        Enviar avaliacao
+        Enviar avaliação
       </Button>
       {feedback && <p className="mt-3 text-sm text-muted-foreground">{feedback}</p>}
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
@@ -95,7 +95,7 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
         last_contact_at: new Date().toISOString(),
       })
 
-      setFeedback(result.ok ? "Lead atualizado." : result.message ?? "Nao foi possivel atualizar.")
+      setFeedback(result.ok ? "Lead atualizado." : result.message ?? "Não foi possivel atualizar.")
     })
   }
 
@@ -125,7 +125,7 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
         href={`/agencia/leads/${lead.id}`}
         className="mt-2 text-sm font-medium text-primary hover:underline"
       >
-        Abrir pagina do lead
+        Abrir página do lead
       </Link>
       {open && (
         <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
@@ -134,12 +134,12 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
             <p><span className="font-medium text-foreground">Telefone:</span> {lead.phone}</p>
             <p><span className="font-medium text-foreground">Pacote:</span> {lead.packageTitle}</p>
             <p><span className="font-medium text-foreground">Origem:</span> {lead.source}</p>
-            <p><span className="font-medium text-foreground">Pagina:</span> {lead.sourcePage}</p>
+            <p><span className="font-medium text-foreground">Página:</span> {lead.sourcePage}</p>
             <p><span className="font-medium text-foreground">CTA:</span> {lead.ctaLabel}</p>
             <p><span className="font-medium text-foreground">Data da viagem:</span> {lead.travelDate}</p>
-            <p><span className="font-medium text-foreground">Viajantes:</span> {lead.travelersCount ?? "Nao informado"}</p>
-            <p><span className="font-medium text-foreground">Orcamento:</span> {lead.budgetRange}</p>
-            <p><span className="font-medium text-foreground">Ultimo contato:</span> {lead.lastContactAt}</p>
+            <p><span className="font-medium text-foreground">Viajantes:</span> {lead.travelersCount ?? "Não informado"}</p>
+            <p><span className="font-medium text-foreground">Orçamento:</span> {lead.budgetRange}</p>
+            <p><span className="font-medium text-foreground">Último contato:</span> {lead.lastContactAt}</p>
             <p><span className="font-medium text-foreground">Mensagem:</span> {lead.message}</p>
           </div>
           <select
@@ -156,7 +156,7 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
           <Textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            placeholder="Anotacoes internas"
+            placeholder="Anotações internas"
             className="min-h-24 resize-none"
           />
           <button
@@ -173,3 +173,4 @@ function LeadCard({ lead }: { lead: AgencyLead }) {
     </div>
   )
 }
+

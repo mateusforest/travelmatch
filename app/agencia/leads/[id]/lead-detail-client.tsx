@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useTransition } from "react"
 import { addAgencyLeadTimelineEvent, updateAgencyLead } from "@/app/actions/leads"
@@ -32,7 +32,7 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
         notes,
         last_contact_at: new Date().toISOString(),
       })
-      setFeedback(result.ok ? "Lead atualizado." : result.message ?? "Nao foi possivel atualizar.")
+      setFeedback(result.ok ? "Lead atualizado." : result.message ?? "Não foi possivel atualizar.")
     })
   }
 
@@ -48,7 +48,7 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
         setManualDescription("")
         setFeedback("Evento registrado.")
       } else {
-        setFeedback(result.message ?? "Nao foi possivel registrar.")
+        setFeedback(result.message ?? "Não foi possivel registrar.")
       }
     })
   }
@@ -64,12 +64,12 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
           <p><span className="font-medium text-foreground">Agencia:</span> {lead.agencyName}</p>
           <p><span className="font-medium text-foreground">Origem:</span> {lead.source}</p>
           <p><span className="font-medium text-foreground">CTA:</span> {lead.ctaLabel}</p>
-          <p><span className="font-medium text-foreground">Pagina:</span> {lead.sourcePage}</p>
+          <p><span className="font-medium text-foreground">Página:</span> {lead.sourcePage}</p>
           <p><span className="font-medium text-foreground">Prioridade:</span> {lead.priority}</p>
           <p><span className="font-medium text-foreground">Score:</span> {lead.match}</p>
-          <p><span className="font-medium text-foreground">Orcamento:</span> {lead.budgetRange}</p>
+          <p><span className="font-medium text-foreground">Orçamento:</span> {lead.budgetRange}</p>
           <p><span className="font-medium text-foreground">Data:</span> {lead.travelDate}</p>
-          <p><span className="font-medium text-foreground">Viajantes:</span> {lead.travelersCount ?? "Nao informado"}</p>
+          <p><span className="font-medium text-foreground">Viajantes:</span> {lead.travelersCount ?? "Não informado"}</p>
         </div>
         <p className="mt-4 rounded-xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground">
           {lead.message}
@@ -93,7 +93,7 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
           className="mt-3 min-h-28 resize-none"
-          placeholder="Anotacoes internas"
+          placeholder="Anotações internas"
         />
         {feedback && <p className="mt-3 text-sm text-muted-foreground">{feedback}</p>}
       </section>
@@ -125,7 +125,7 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
           <Textarea
             value={manualDescription}
             onChange={(event) => setManualDescription(event.target.value)}
-            placeholder="Descricao"
+            placeholder="Descrição"
             className="mt-2 min-h-20 resize-none rounded-xl"
           />
           <Button onClick={addEvent} disabled={pending} className="mt-3 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
@@ -136,3 +136,4 @@ export function LeadDetailClient({ lead }: { lead: AgencyLeadDetails }) {
     </div>
   )
 }
+

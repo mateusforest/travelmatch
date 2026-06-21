@@ -304,6 +304,21 @@ export async function removePackageGalleryImage(packageId: string, imageUrl: str
     return { ok: false, message: agencyError }
   }
 
+  const { data: pkg } = await supabase
+    .from("packages")
+    .select("image_url")
+    .eq("id", packageId)
+    .eq("agency_id", agencyId)
+    .maybeSingle()
+
+  const { data: removed } = await supabase
+    .from("package_gallery_images")
+    .select("storage_path")
+    .eq("package_id", packageId)
+    .eq("agency_id", agencyId)
+    .eq("image_url", imageUrl)
+    .maybeSingle()
+
   const { error } = await supabase
     .from("package_gallery_images")
     .delete()
@@ -315,6 +330,62 @@ export async function removePackageGalleryImage(packageId: string, imageUrl: str
     return { ok: false, message: error.message }
   }
 
+  if (removed?.storage_path) {
+    await supabase.storage.from("travelmatch-images").remove([removed.storage_path])
+  }
+
+  if (pkg?.image_url === imageUrl) {
+    const { data: nextImage } = await supabase
+      .from("package_gallery_images")
+      .select("image_url")
+      .eq("package_id", packageId)
+      .eq("agency_id", agencyId)
+      .order("position", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    await supabase
+      .from("packages")
+      .update({ image_url: nextImage?.image_url ?? null })
+      .eq("id", packageId)
+      .eq("agency_id", agencyId)
+  }
+
+  revalidatePath(`/agencia/pacotes/${packageId}`)
+  revalidatePath(`/agencia/pacotes/${packageId}/editar`)
+  return { ok: true }
+}
+
+export async function setAgencyPackageCover(packageId: string, imageUrl: string) {
+  const { supabase, agencyId, error: agencyError } = await getAgencyIdForCurrentUser()
+
+  if (!agencyId) {
+    return { ok: false, message: agencyError }
+  }
+
+  const { data: image } = await supabase
+    .from("package_gallery_images")
+    .select("id")
+    .eq("package_id", packageId)
+    .eq("agency_id", agencyId)
+    .eq("image_url", imageUrl)
+    .maybeSingle()
+
+  if (!image) {
+    return { ok: false, message: "Imagem não encontrada na galeria." }
+  }
+
+  const { error } = await supabase
+    .from("packages")
+    .update({ image_url: imageUrl })
+    .eq("id", packageId)
+    .eq("agency_id", agencyId)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath("/agencia/pacotes")
   revalidatePath(`/agencia/pacotes/${packageId}`)
   revalidatePath(`/agencia/pacotes/${packageId}/editar`)
   return { ok: true }

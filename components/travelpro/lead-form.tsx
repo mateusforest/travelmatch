@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useTransition } from "react"
 import { usePathname } from "next/navigation"
@@ -156,7 +156,7 @@ export function LeadForm({
             />
           </div>
           <div>
-            <Label htmlFor="lead-budget">Orcamento</Label>
+            <Label htmlFor="lead-budget">Orçamento</Label>
             <Input
               id="lead-budget"
               value={budgetRange}
@@ -193,3 +193,4 @@ export function LeadForm({
     </div>
   )
 }
+

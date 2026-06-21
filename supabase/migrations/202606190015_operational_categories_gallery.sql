@@ -1,27 +1,30 @@
 insert into public.travel_categories (name, slug, image_url, active)
 values
-  ('Praia', 'praia', '/hero-plane-window.png', true),
-  ('Europa', 'europa', '/hero-plane-window.png', true),
-  ('Estados Unidos', 'estados-unidos', '/hero-plane-window.png', true),
-  ('América do Sul', 'america-do-sul', '/hero-plane-window.png', true),
-  ('Caribe', 'caribe', '/hero-plane-window.png', true),
-  ('Cruzeiros', 'cruzeiros', '/hero-plane-window.png', true),
-  ('Disney', 'disney', '/hero-plane-window.png', true),
-  ('Lua de Mel', 'lua-de-mel', '/hero-plane-window.png', true),
-  ('Família', 'familia', '/hero-plane-window.png', true),
-  ('Aventura', 'aventura', '/hero-plane-window.png', true),
-  ('Luxo', 'luxo', '/hero-plane-window.png', true),
-  ('Neve', 'neve', '/hero-plane-window.png', true),
-  ('Exóticos', 'exoticos', '/hero-plane-window.png', true),
-  ('Intercâmbio', 'intercambio', '/hero-plane-window.png', true),
-  ('Religioso', 'religioso', '/hero-plane-window.png', true),
-  ('Grupos', 'grupos', '/hero-plane-window.png', true),
-  ('Corporativo', 'corporativo', '/hero-plane-window.png', true)
+  ('Praia', 'praia', '/category-images/praia.svg', true),
+  ('Europa', 'europa', '/category-images/europa.svg', true),
+  ('Estados Unidos', 'estados-unidos', '/category-images/estados-unidos.svg', true),
+  ('América do Sul', 'america-do-sul', '/category-images/america-do-sul.svg', true),
+  ('Caribe', 'caribe', '/category-images/caribe.svg', true),
+  ('Cruzeiros', 'cruzeiros', '/category-images/cruzeiros.svg', true),
+  ('Disney', 'disney', '/category-images/disney.svg', true),
+  ('Lua de Mel', 'lua-de-mel', '/category-images/lua-de-mel.svg', true),
+  ('Família', 'familia', '/category-images/familia.svg', true),
+  ('Aventura', 'aventura', '/category-images/aventura.svg', true),
+  ('Luxo', 'luxo', '/category-images/luxo.svg', true),
+  ('Neve', 'neve', '/category-images/neve.svg', true),
+  ('Exóticos', 'exoticos', '/category-images/exoticos.svg', true),
+  ('Intercâmbio', 'intercambio', '/category-images/intercambio.svg', true),
+  ('Grupos', 'grupos', '/category-images/grupos.svg', true),
+  ('Corporativo', 'corporativo', '/category-images/corporativo.svg', true)
 on conflict (slug) do update
 set
   name = excluded.name,
-  image_url = coalesce(public.travel_categories.image_url, excluded.image_url),
+  image_url = excluded.image_url,
   active = true;
+
+update public.travel_categories
+set active = false
+where slug = 'religioso';
 
 update public.agency_profiles ap
 set status = 'active'

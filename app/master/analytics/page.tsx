@@ -90,7 +90,7 @@ export default async function MasterAnalyticsPage({
         <SectionCard title="Pacotes mais clicados" action={<Sparkle className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.topClickedPackages} />
         </SectionCard>
-        <SectionCard title="Agências por conversao" action={<Building2 className="h-4 w-4 text-muted-foreground" />}>
+        <SectionCard title="Agências por conversão" action={<Building2 className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.agenciesByConversion} />
         </SectionCard>
       </div>
@@ -114,7 +114,7 @@ export default async function MasterAnalyticsPage({
             <SectionCard title="Pacotes com mais leads">
               <RankingList items={analytics.topLeadPackages} />
             </SectionCard>
-            <SectionCard title="Paginas com maior conversao">
+            <SectionCard title="Páginas com maior conversão">
               <RankingList items={analytics.pagesByConversion} />
             </SectionCard>
           </div>

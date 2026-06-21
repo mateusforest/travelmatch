@@ -26,7 +26,7 @@ import { createAgencyPackage, updateAgencyPackage, type PackageInput } from "@/a
 import { generatePackageDescription } from "@/app/actions/cos"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { AgencyPackageDetails } from "@/lib/data/agency"
-import { removePackageGalleryImage, uploadPackageDraftImage, uploadPackageImage } from "@/app/actions/packages"
+import { removePackageGalleryImage, setAgencyPackageCover, uploadPackageDraftImage, uploadPackageImage } from "@/app/actions/packages"
 import { destinationSuggestions } from "@/lib/travel-suggestions"
 
 const steps = [
@@ -150,6 +150,18 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
       if (imageUrl === url) setImageUrl(next[0] ?? "")
       return next
     })
+  }
+
+  const setCoverImage = async (url: string) => {
+    if (pkg) {
+      const result = await setAgencyPackageCover(pkg.id, url)
+      if (!result.ok) {
+        setError(result.message ?? "Não foi possível definir a capa.")
+        return
+      }
+    }
+    setImageUrl(url)
+    setGalleryImages((current) => [url, ...current.filter((item) => item !== url)].slice(0, 15))
   }
 
   return (
@@ -353,6 +365,15 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
                     </button>
                     {index === 0 && (
                       <p className="absolute bottom-0 left-0 right-0 bg-background/90 px-2 py-1 text-xs text-muted-foreground">Principal</p>
+                    )}
+                    {index !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void setCoverImage(url)}
+                        className="absolute bottom-2 left-2 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm"
+                      >
+                        Usar capa
+                      </button>
                     )}
                   </div>
                 ))}

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import { Tag, MapPin, Layers, Search, FileText, Plus, X } from "lucide-react"
@@ -249,7 +249,7 @@ export default function MasterConfiguracoesPage() {
                   className="w-fit rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={async () => {
                     const result = await updateMatchSettings(matchSettings)
-                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Nao foi possivel salvar.")
+                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Não foi possivel salvar.")
                   }}
                 >
                   Salvar pesos
@@ -276,7 +276,7 @@ export default function MasterConfiguracoesPage() {
                   className="mt-4 w-fit rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={async () => {
                     const result = await updateReputationSettings(reputationSettings)
-                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Nao foi possivel salvar.")
+                    setMatchFeedback(result.ok ? "Pesos salvos." : result.message ?? "Não foi possivel salvar.")
                   }}
                 >
                   Salvar reputacao
@@ -289,3 +289,4 @@ export default function MasterConfiguracoesPage() {
     </div>
   )
 }
+

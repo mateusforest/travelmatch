@@ -1,4 +1,4 @@
-"use server"
+﻿"use server"
 
 import { randomUUID } from "crypto"
 import { revalidatePath } from "next/cache"
@@ -34,7 +34,7 @@ async function requireAgency() {
     .maybeSingle()
 
   if (error || !agency) {
-    throw new Error("Perfil da agencia nao encontrado.")
+    throw new Error("Perfil da agencia não encontrado.")
   }
 
   return { supabase, agencyId: agency.id as string }
@@ -51,7 +51,7 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
     .maybeSingle()
 
   if (planError || !plan) {
-    throw new Error("Plano nao encontrado.")
+    throw new Error("Plano não encontrado.")
   }
 
   const externalReference = `tm_${randomUUID()}`
@@ -90,7 +90,7 @@ export async function checkoutSubscription(planSlug: PlanSlug) {
     })
 
   if (intentError) {
-    throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
+    throw new Error(intentError?.message ?? "Não foi possivel iniciar o pagamento.")
   }
 
   redirect(session.checkoutUrl)
@@ -134,7 +134,7 @@ export async function checkoutPromotion(type: PromotionType) {
     })
 
   if (intentError) {
-    throw new Error(intentError?.message ?? "Nao foi possivel iniciar o pagamento.")
+    throw new Error(intentError?.message ?? "Não foi possivel iniciar o pagamento.")
   }
 
   redirect(session.checkoutUrl)
@@ -155,3 +155,4 @@ export async function cancelAgencySubscription() {
 
   revalidatePath("/agencia/assinatura")
 }
+

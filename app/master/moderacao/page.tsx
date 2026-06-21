@@ -1,4 +1,4 @@
-import {
+﻿import {
   CheckCircle2,
   EyeOff,
   Eye,
@@ -38,7 +38,7 @@ export default async function MasterModeracaoPage() {
               </span>
               <p className="text-sm font-medium text-foreground">Fila vazia</p>
               <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                Nenhuma avaliacao registrada ainda.
+                Nenhuma avaliação registrada ainda.
               </p>
             </div>
           ) : (
@@ -48,7 +48,7 @@ export default async function MasterModeracaoPage() {
                   <div>
                     <p className="font-medium text-foreground">{review.agency}</p>
                     <p className="text-sm text-muted-foreground">
-                      Nota {review.rating} · {review.wouldRecommend ? "Recomenda" : "Nao recomenda"} · Lead {review.leadId}
+                      Nota {review.rating} · {review.wouldRecommend ? "Recomenda" : "Não recomenda"} · Lead {review.leadId}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">{review.comment}</p>
                   </div>
@@ -104,3 +104,4 @@ export default async function MasterModeracaoPage() {
     </div>
   )
 }
+

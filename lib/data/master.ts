@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation"
+﻿import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
 import { calculateAgencyFeatureScoreBreakdown } from "@/lib/data/agency-feature-score"
 import { getPeriodRange } from "@/lib/period"
@@ -313,7 +313,7 @@ export async function getMasterAgencies(): Promise<MasterAgency[]> {
       { label: "Views perfil", value: scoreBreakdown.profileViewsScore },
       { label: "Views pacotes", value: scoreBreakdown.packageViewsScore },
       { label: "Leads", value: scoreBreakdown.leadsScore },
-      { label: "Conversao", value: scoreBreakdown.conversionScore },
+      { label: "Conversão", value: scoreBreakdown.conversionScore },
       { label: "CTA", value: scoreBreakdown.ctaEventsScore },
       { label: "Pacotes", value: scoreBreakdown.publishedPackagesScore },
     ],
@@ -502,7 +502,7 @@ export async function getMasterCommercialAnalyticsData(period?: string | null, f
       conversionRate: leadRows.length > 0 ? `${Math.round((wonLeads / leadRows.length) * 100)}%` : "0%",
     },
     eventsByType: countBy(eventRows.map((event) => event.event_type)),
-    leadsBySource: countBy(leadRows.map((lead) => lead.source ?? "Nao informado")),
+    leadsBySource: countBy(leadRows.map((lead) => lead.source ?? "Não informado")),
     topClickedPackages: packageRows
       .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
@@ -523,7 +523,7 @@ export async function getMasterCommercialAnalyticsData(period?: string | null, f
     pagesByConversion: countBy(
       leadRows
         .filter((lead) => lead.status === "won" || lead.status === "converted")
-        .map((lead) => lead.source_page ?? "Nao informado"),
+        .map((lead) => lead.source_page ?? "Não informado"),
     ),
     reputationRanking: Array.from(
       reviewRows.reduce((map, review) => {
@@ -622,3 +622,4 @@ export async function getMasterUnansweredLeadAlerts(): Promise<UnansweredLeadAle
       createdAt: new Date(lead.created_at).toLocaleDateString("pt-BR"),
     }))
 }
+

@@ -10,18 +10,16 @@ import {
   YAxis,
 } from "recharts"
 
-// Plataforma 0km: série temporal zerada até haver tráfego e leads reais.
-const data = [
-  { month: "Jan", visitantes: 0, leads: 0 },
-  { month: "Fev", visitantes: 0, leads: 0 },
-  { month: "Mar", visitantes: 0, leads: 0 },
-  { month: "Abr", visitantes: 0, leads: 0 },
-  { month: "Mai", visitantes: 0, leads: 0 },
-  { month: "Jun", visitantes: 0, leads: 0 },
-]
+type AnalyticsChartPoint = {
+  month: string
+  visitantes: number
+  leads: number
+  cliques?: number
+}
 
-export function AnalyticsChart() {
-  const hasData = data.some((d) => d.visitantes > 0 || d.leads > 0)
+export function AnalyticsChart({ data = [] }: { data?: AnalyticsChartPoint[] }) {
+  const hasData = data.some((d) => d.visitantes > 0 || d.leads > 0 || (d.cliques ?? 0) > 0)
+
   if (!hasData) {
     return (
       <div className="flex h-72 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-secondary/30 text-center">
@@ -32,6 +30,7 @@ export function AnalyticsChart() {
       </div>
     )
   }
+
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -57,7 +56,6 @@ export function AnalyticsChart() {
             tickLine={false}
             axisLine={false}
             tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
-            tickFormatter={(v) => `${Math.round(v / 1000)}k`}
           />
           <Tooltip
             contentStyle={{

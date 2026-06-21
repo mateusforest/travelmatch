@@ -1,8 +1,9 @@
-import { redirect } from "next/navigation"
+﻿import { redirect } from "next/navigation"
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
 import { formatCurrencyBRL, formatDateBR } from "@/lib/format"
 import type { AgencyPackage } from "@/components/agencia/package-card"
 import { getPeriodRange } from "@/lib/period"
+import { calculateMatchScore } from "@/lib/match-score"
 
 type AgencyProfile = {
   id: string
@@ -65,7 +66,7 @@ type LeadRow = {
   notes: string | null
   last_contact_at: string | null
   created_at: string
-  packages?: { title: string; destination: string }[] | null
+  packages?: { title: string; destination: string; description?: string | null }[] | null
 }
 
 type LeadTimelineRow = {
@@ -123,6 +124,7 @@ export type AgencyAnalyticsData = {
   topLeadPackages: { name: string; value: string }[]
   conversionsByPage: { name: string; value: string }[]
   leadsByStatus: { name: string; value: string }[]
+  timeline: { month: string; visitantes: number; leads: number; cliques: number }[]
 }
 
 export type AgencyDashboardData = {
@@ -146,6 +148,7 @@ export type AgencyDashboardData = {
     views: number
     leads: number
   }[]
+  recentLeads: AgencyLead[]
 }
 
 export type AgencyProfileData = AgencyProfile
@@ -239,6 +242,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       recommendationRate: 0,
       unansweredAlerts: 0,
       topViewedPackages: [],
+      recentLeads: [],
     }
   }
 
@@ -332,6 +336,14 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     .eq("agency_id", agency.id)
     .eq("status", "published")
 
+  const { data: recentLeadsData } = await supabase
+    .from("traveler_leads")
+    .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination,description)")
+    .eq("agency_id", agency.id)
+    .gte("created_at", since.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(5)
+
   const topViewedPackages = ((topPackagesData ?? []) as PackageRow[])
     .map((pkg) => ({
       id: pkg.id,
@@ -345,7 +357,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
 
   const sourceCounts = new Map<string, number>()
   for (const lead of (leadSourcesData ?? []) as { source: string | null; source_page: string | null }[]) {
-    const source = lead.source || lead.source_page || "Nao informado"
+    const source = lead.source || lead.source_page || "Não informado"
     sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1)
   }
 
@@ -367,6 +379,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     recommendationRate: Number(reputation?.recommendation_rate ?? 0),
     unansweredAlerts,
     topViewedPackages,
+    recentLeads: ((recentLeadsData ?? []) as LeadRow[]).map(mapLeadRow),
   }
 }
 
@@ -427,6 +440,12 @@ export async function getAgencyPackageDetails(
   }
 
   const pkg = data as PackageRow
+  const galleryImages = (pkg.package_gallery_images ?? [])
+    .sort((a, b) => a.position - b.position)
+    .map((image) => image.image_url)
+  const orderedGalleryImages = pkg.image_url
+    ? [pkg.image_url, ...galleryImages.filter((image) => image !== pkg.image_url)]
+    : galleryImages
 
   return {
     id: pkg.id,
@@ -438,9 +457,7 @@ export async function getAgencyPackageDetails(
     price_from: pkg.price_from,
     duration_days: pkg.duration_days ?? null,
     image_url: pkg.image_url,
-    gallery_images: (pkg.package_gallery_images ?? [])
-      .sort((a, b) => a.position - b.position)
-      .map((image) => image.image_url),
+    gallery_images: orderedGalleryImages,
     status: pkg.status as AgencyPackageDetails["status"],
     featured: pkg.featured,
     created_at: pkg.created_at ?? "",
@@ -529,27 +546,29 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       topLeadPackages: [],
       conversionsByPage: [],
       leadsByStatus: [],
+      timeline: [],
     }
   }
 
   const supabase = await createSupabaseServerClient()
   const range = getPeriodRange(period, from, to)
   const [
-    { count: packageViews },
-    { count: profileViews },
+    { data: packageViews },
+    { data: profileViews },
     { data: ctaEvents },
     { data: leads },
     { data: packages },
   ] = await Promise.all([
-    supabase.from("package_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
-    supabase.from("agency_profile_views").select("id", { count: "exact", head: true }).eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
-    supabase.from("cta_events").select("event_type,source_page,package_id").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
-    supabase.from("traveler_leads").select("status,source,source_page,package_id").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("package_views").select("id,created_at").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("agency_profile_views").select("id,created_at").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("cta_events").select("event_type,source_page,package_id,created_at").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("traveler_leads").select("status,source,source_page,package_id,lead_score,created_at").eq("agency_id", agency.id).gte("created_at", range.from).lte("created_at", range.to),
     supabase.from("packages").select("id,title,traveler_leads(count),package_views(count)").eq("agency_id", agency.id),
   ])
 
-  const leadRows = (leads ?? []) as { status: string; source: string | null; source_page: string | null; package_id: string | null }[]
-  const eventRows = (ctaEvents ?? []) as { event_type: string; source_page: string | null; package_id: string | null }[]
+  const viewRows = ([...((packageViews ?? []) as { created_at: string }[]), ...((profileViews ?? []) as { created_at: string }[])])
+  const leadRows = (leads ?? []) as { status: string; source: string | null; source_page: string | null; package_id: string | null; lead_score?: number | null; created_at: string }[]
+  const eventRows = (ctaEvents ?? []) as { event_type: string; source_page: string | null; package_id: string | null; created_at: string }[]
   const packageRows = (packages ?? []) as { id: string; title: string; traveler_leads?: { count: number }[]; package_views?: { count: number }[] }[]
   const countBy = (items: string[]) => {
     const map = new Map<string, number>()
@@ -557,15 +576,27 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value: String(value) }))
   }
 
+  const monthKey = (date: string) => new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(date))
+  const timelineMap = new Map<string, { month: string; visitantes: number; leads: number; cliques: number }>()
+  const ensureMonth = (date: string) => {
+    const key = monthKey(date)
+    const row = timelineMap.get(key) ?? { month: key, visitantes: 0, leads: 0, cliques: 0 }
+    timelineMap.set(key, row)
+    return row
+  }
+  viewRows.forEach((view) => ensureMonth(view.created_at).visitantes += 1)
+  leadRows.forEach((lead) => ensureMonth(lead.created_at).leads += 1)
+  eventRows.forEach((event) => ensureMonth(event.created_at).cliques += 1)
+
   return {
     stats: {
-      views: (packageViews ?? 0) + (profileViews ?? 0),
+      views: viewRows.length,
       clicks: eventRows.length,
       leads: leadRows.length,
       conversions: leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length,
     },
     ctaEvents: countBy(eventRows.map((event) => event.event_type)),
-    leadSources: countBy(leadRows.map((lead) => lead.source ?? "Nao informado")),
+    leadSources: countBy(leadRows.map((lead) => lead.source ?? "Não informado")),
     topClickedPackages: packageRows
       .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
@@ -574,8 +605,9 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
       .slice(0, 6),
-    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => lead.source_page ?? "Nao informado")),
+    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => lead.source_page ?? "Não informado")),
     leadsByStatus: countBy(leadRows.map((lead) => leadStatusMap[lead.status] ?? lead.status)),
+    timeline: Array.from(timelineMap.values()),
   }
 }
 
@@ -583,23 +615,33 @@ function mapLeadRow(lead: LeadRow): AgencyLead {
   return {
     id: lead.id,
     name: lead.traveler_name ?? "Viajante",
-    email: lead.traveler_email ?? "Nao informado",
-    phone: lead.traveler_phone ?? "Nao informado",
+    email: lead.traveler_email ?? "Não informado",
+    phone: lead.traveler_phone ?? "Não informado",
     interest: lead.desired_destination ?? lead.message ?? "Interesse registrado",
     message: lead.message ?? "Sem mensagem",
     date: formatDateBR(lead.created_at),
-    match: lead.lead_score ?? 0,
+    match: lead.lead_score && lead.lead_score > 0 ? lead.lead_score : calculateMatchScore(
+      {
+        title: lead.packages?.[0]?.title ?? "",
+        destination: lead.packages?.[0]?.destination ?? "",
+        description: lead.packages?.[0]?.description ?? lead.message ?? "",
+        featured: false,
+        views: 0,
+        leads: 0,
+      },
+      { query: lead.desired_destination ?? lead.message ?? "" },
+    ),
     status: leadStatusMap[lead.status] ?? "Novo",
     statusValue: leadStatusValueMap[lead.status] ?? "new",
-    source: lead.source ?? "Nao informado",
-    sourcePage: lead.source_page ?? "Nao informado",
-    ctaLabel: lead.cta_label ?? "Nao informado",
-    travelDate: lead.travel_date ?? "Nao informado",
+    source: lead.source ?? "Não informado",
+    sourcePage: lead.source_page ?? "Não informado",
+    ctaLabel: lead.cta_label ?? "Não informado",
+    travelDate: lead.travel_date ?? "Não informado",
     travelersCount: lead.travelers_count,
-    budgetRange: lead.budget_range ?? "Nao informado",
+    budgetRange: lead.budget_range ?? "Não informado",
     priority: lead.priority ?? "normal",
     notes: lead.notes ?? "",
-    lastContactAt: lead.last_contact_at ? formatDateBR(lead.last_contact_at) : "Nao informado",
+    lastContactAt: lead.last_contact_at ? formatDateBR(lead.last_contact_at) : "Não informado",
     packageTitle: lead.packages?.[0]?.title ?? "Sem pacote vinculado",
   }
 }
@@ -622,3 +664,4 @@ export async function getActiveCategories() {
 
   return data ?? []
 }
+

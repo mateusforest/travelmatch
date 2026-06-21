@@ -6,11 +6,12 @@ import {
   Sparkles,
   LineChart,
 } from "lucide-react"
+import Link from "next/link"
 import { PageHeader, SectionCard, StatCard } from "@/components/agencia/ui-bits"
+import { AnalyticsChart } from "@/components/master/analytics-chart"
 import { RankingList } from "@/components/master/master-bits"
 import { getAgencyAnalyticsData } from "@/lib/data/agency"
 import { analyticsPeriods } from "@/lib/period"
-import Link from "next/link"
 
 export default async function AnalyticsPage({
   searchParams,
@@ -56,6 +57,12 @@ export default async function AnalyticsPage({
         ))}
       </div>
 
+      <div className="mt-6">
+        <SectionCard title="Evolução temporal" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
+          <AnalyticsChart data={analytics.timeline} />
+        </SectionCard>
+      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SectionCard title="Eventos por CTA" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.ctaEvents} />
@@ -69,7 +76,7 @@ export default async function AnalyticsPage({
         <SectionCard title="Pacotes com mais leads" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.topLeadPackages} />
         </SectionCard>
-        <SectionCard title="Conversao por pagina" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
+        <SectionCard title="Conversão por página" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
           <RankingList items={analytics.conversionsByPage} />
         </SectionCard>
         <SectionCard title="Leads por status" action={<LineChart className="h-4 w-4 text-muted-foreground" />}>
@@ -85,7 +92,7 @@ export default async function AnalyticsPage({
           <div>
             <h2 className="text-base font-semibold text-foreground">Insights do COS</h2>
             <p className="mt-1 text-sm leading-relaxed text-foreground/90">
-              Conforme os dados reais evoluirem, os principais sinais comerciais aparecem acima.
+              Conforme os dados reais evoluírem, os principais sinais comerciais aparecem acima.
             </p>
           </div>
         </div>

@@ -8,7 +8,7 @@ export default async function MasterLeadsPage() {
   const metrics = [
     { icon: Inbox, label: "Leads totais", value: String(funnel.totalLeads), hint: "Acumulado da plataforma" },
     { icon: CheckCircle2, label: "Leads convertidos", value: String(funnel.wonLeads), hint: "Negocios fechados" },
-    { icon: Percent, label: "Taxa media de conversao", value: funnel.conversionRate, hint: "Ganhos/leads" },
+    { icon: Percent, label: "Taxa media de conversão", value: funnel.conversionRate, hint: "Ganhos/leads" },
   ]
 
   return (

@@ -74,11 +74,31 @@ export default async function AgenciaDashboardPage() {
             </Link>
           }
         >
-          <EmptyState
-            icon={Inbox}
-            title="Nenhum lead ainda"
-            description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerão aqui."
-          />
+          {dashboard.recentLeads.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title="Nenhum lead ainda"
+              description="Quando viajantes demonstrarem interesse nos seus pacotes, eles aparecerão aqui."
+            />
+          ) : (
+            <ul className="flex flex-col">
+              {dashboard.recentLeads.map((lead) => (
+                <li
+                  key={lead.id}
+                  className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0 last:pb-0 first:pt-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{lead.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{lead.interest}</p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p className="font-semibold text-primary">{lead.match}%</p>
+                    <p>{lead.status}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </SectionCard>
 
         <SectionCard

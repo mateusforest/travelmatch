@@ -1,4 +1,4 @@
-import { Check, CreditCard, Sparkles } from "lucide-react"
+﻿import { Check, CreditCard, Sparkles } from "lucide-react"
 import { cancelAgencySubscription, checkoutPromotion, checkoutSubscription } from "@/app/actions/billing"
 import { Button } from "@/components/ui/button"
 import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
@@ -73,7 +73,7 @@ export default async function AssinaturaPage() {
             <div>
               <p className="font-semibold text-foreground">{billing.planName}</p>
               <p className="text-sm text-muted-foreground">
-                Status: {billing.status} · Renovacao: {billing.renewalDate}
+                Status: {billing.status} · Renovação: {billing.renewalDate}
               </p>
               <p className="text-sm text-muted-foreground">
                 Pacotes: {billing.packageUsage} · Analytics: {billing.analyticsLevel}
@@ -157,7 +157,7 @@ export default async function AssinaturaPage() {
               <CreditCard className="h-5 w-5" />
             </span>
             <span>
-              Checkout Stripe ativo. Status do plano: {billing.status} · Renovacao: {billing.renewalDate}
+              Checkout Stripe ativo. Status do plano: {billing.status} · Renovação: {billing.renewalDate}
             </span>
           </div>
           {billing.planSlug !== "free" && billing.status !== "canceled" && (
@@ -231,7 +231,7 @@ export default async function AssinaturaPage() {
         <SectionCard title="Promocoes">
           {billing.promotions.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
-              Nenhuma promocao ativa ou comprada ainda.
+              Nenhuma promoção ativa ou comprada ainda.
             </p>
           ) : (
             <ul className="flex flex-col">
@@ -254,3 +254,4 @@ export default async function AssinaturaPage() {
     </>
   )
 }
+
