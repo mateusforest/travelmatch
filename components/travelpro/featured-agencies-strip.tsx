@@ -1,10 +1,10 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
-import { Award, ChevronRight, MapPin, Package, Star } from "lucide-react"
+import { ChevronRight, MapPin, Package, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import type { FeaturedAgency } from "@/lib/data/featured-agencies"
+import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
 
 type FeaturedAgenciesStripProps = {
   agencies: FeaturedAgency[]
@@ -46,19 +46,12 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
                   href={agency.slug ? `/agencias/${agency.slug}` : "#"}
                   className="group flex h-full gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm shadow-black/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
                 >
-                  <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-primary/10">
-                    {agency.logoUrl ? (
-                      <Image
-                        src={agency.logoUrl}
-                        alt={agency.name}
-                        fill
-                        sizes="64px"
-                        className="object-contain p-2"
-                      />
-                    ) : (
-                      <Award className="h-7 w-7 text-primary" />
-                    )}
-                  </div>
+                  <AgencyLogoImage
+                    src={agency.logoUrl}
+                    name={agency.name}
+                    className="h-16 w-16 shrink-0 rounded-2xl border border-border"
+                    imageClassName="p-2"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

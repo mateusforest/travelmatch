@@ -1,13 +1,16 @@
 "use server"
 
+import { randomUUID } from "crypto"
 import { revalidatePath } from "next/cache"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 const allowedStatuses = new Set([
   "new",
   "contacted",
   "proposal_sent",
   "won",
+  "converted",
   "lost",
   "archived",
 ])
@@ -60,18 +63,61 @@ export async function updateAgencyLead(
     return { ok: false, message: "Nenhum dado para atualizar." }
   }
 
-  const { error } = await supabase
+  const { data: updatedLead, error } = await supabase
     .from("traveler_leads")
     .update(update)
+    .select("id,agency_id,status")
     .eq("id", leadId)
     .eq("agency_id", agency.id)
+    .maybeSingle()
 
   if (error) {
     return { ok: false, message: error.message }
   }
 
+  if (!updatedLead) {
+    return { ok: false, message: "Lead nao encontrado." }
+  }
+
+  if (input.status === "won" || input.status === "converted") {
+    const admin = createSupabaseAdminClient()
+    const { data: existingToken } = await admin
+      .from("review_tokens")
+      .select("id")
+      .eq("lead_id", leadId)
+      .maybeSingle()
+
+    if (!existingToken) {
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const token = `${randomUUID().replaceAll("-", "")}${randomUUID().replaceAll("-", "")}`
+      const { error: tokenError } = await admin.from("review_tokens").insert({
+        lead_id: leadId,
+        agency_id: agency.id,
+        token,
+        expires_at: expiresAt,
+      })
+
+      if (tokenError && tokenError.code !== "23505") {
+        return { ok: false, message: tokenError.message }
+      }
+
+      if (!tokenError) {
+        await admin.from("lead_timeline_events").insert({
+          lead_id: leadId,
+          agency_id: agency.id,
+          event_type: "review_token_created",
+          title: "Link de avaliação gerado",
+          description: "Token público de avaliação criado para o lead ganho.",
+          metadata: { expires_at: expiresAt },
+          created_by: user.id,
+        })
+      }
+    }
+  }
+
   revalidatePath("/agencia")
   revalidatePath("/agencia/leads")
+  revalidatePath(`/agencia/leads/${leadId}`)
   return { ok: true }
 }
 

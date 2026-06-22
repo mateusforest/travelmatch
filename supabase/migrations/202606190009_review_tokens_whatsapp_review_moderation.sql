@@ -109,7 +109,7 @@ begin
   if new.status in ('won', 'converted')
     and (tg_op = 'INSERT' or old.status is distinct from new.status)
   then
-    generated_token := encode(gen_random_bytes(24), 'hex');
+    generated_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 
     insert into public.review_tokens (
       lead_id,

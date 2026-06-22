@@ -6,6 +6,7 @@ import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
 import { AgencyViewTracker } from "@/components/travelpro/view-tracker"
 import { TrackedLink } from "@/components/travelpro/tracked-link"
+import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
 import { getPublicAgencyBySlug } from "@/lib/data/public"
 
 export default async function PublicAgencyPage({
@@ -41,19 +42,12 @@ export default async function PublicAgencyPage({
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
               </div>
               <div className="px-6 pb-6">
-                <div className="-mt-10 mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-card bg-primary/10">
-                  {agency.logo_url ? (
-                    <Image
-                      src={agency.logo_url}
-                      alt={agency.agency_name}
-                      width={80}
-                      height={80}
-                      className="h-full w-full object-contain p-2"
-                    />
-                  ) : (
-                    <Package className="h-8 w-8 text-primary" />
-                  )}
-                </div>
+                <AgencyLogoImage
+                  src={agency.logo_url}
+                  name={agency.agency_name}
+                  className="-mt-10 mb-4 h-20 w-20 rounded-2xl border-4 border-card"
+                  imageClassName="p-2"
+                />
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">
                   {agency.agency_name}
                 </h1>

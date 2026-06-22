@@ -3,7 +3,6 @@
 import { useState } from "react"
 import {
   ImagePlus,
-  Store,
   Phone,
   MessageCircle,
   Instagram,
@@ -19,6 +18,7 @@ import { PageHeader, SectionCard } from "@/components/agencia/ui-bits"
 import { updateAgencyProfile, uploadAgencyBanner, uploadAgencyLogo } from "@/app/actions/profile"
 import type { AgencyProfileData } from "@/lib/data/agency"
 import { citySuggestions } from "@/lib/travel-suggestions"
+import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
 
 const allSpecialties = [
   "Europa",
@@ -158,9 +158,17 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                 <label
                   htmlFor="logo"
                   className="mt-1.5 flex h-20 w-20 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 transition-colors hover:border-primary/40"
-                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" } : undefined}
                 >
-                  {!logoUrl && <ImagePlus className="h-5 w-5 text-muted-foreground" />}
+                  {logoUrl ? (
+                    <AgencyLogoImage
+                      src={logoUrl}
+                      name={name || "TravelMatch"}
+                      className="h-full w-full rounded-2xl"
+                      imageClassName="p-2"
+                    />
+                  ) : (
+                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  )}
                   <input
                     id="logo"
                     type="file"
@@ -327,12 +335,12 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                 style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}
               />
               <div className="px-5 pb-5">
-                <div
-                  className="-mt-8 mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card bg-primary/10 bg-center bg-no-repeat"
-                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "contain" } : undefined}
-                >
-                  {!logoUrl && <Store className="h-7 w-7 text-primary" />}
-                </div>
+                <AgencyLogoImage
+                  src={logoUrl}
+                  name={name || "TravelMatch"}
+                  className="-mt-8 mb-3 h-16 w-16 rounded-2xl border-4 border-card"
+                  imageClassName="p-2"
+                />
                 <h3 className="text-lg font-semibold text-foreground">
                   {name || "Nome da agência"}
                 </h3>

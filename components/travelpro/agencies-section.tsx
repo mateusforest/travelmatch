@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { Award, ChevronRight, MapPin, Package, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
+import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
 
 type AgencyRow = {
   id: string
@@ -136,19 +136,12 @@ export function AgenciesSection() {
               >
                 <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.04] transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
                   <div className="mb-4 flex items-start gap-3">
-                    <div className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-primary/10">
-                      {agency.logo ? (
-                        <Image
-                          src={agency.logo}
-                          alt={agency.name}
-                          fill
-                          sizes="56px"
-                          className="object-contain p-2"
-                        />
-                      ) : (
-                        <Award className="h-6 w-6 text-primary" />
-                      )}
-                    </div>
+                    <AgencyLogoImage
+                      src={agency.logo}
+                      name={agency.name}
+                      className="h-14 w-14 shrink-0 rounded-2xl border border-border"
+                      imageClassName="p-2"
+                    />
                     <div className="min-w-0">
                       <h3 className="truncate text-lg font-semibold text-foreground">
                         {agency.name}
