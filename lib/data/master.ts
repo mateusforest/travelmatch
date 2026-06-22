@@ -2,6 +2,7 @@
 import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/server"
 import { calculateAgencyFeatureScoreBreakdown } from "@/lib/data/agency-feature-score"
 import { getPeriodRange } from "@/lib/period"
+import { humanizeTrackingLabel } from "@/lib/display-labels"
 
 type MasterAgencyRow = {
   id: string
@@ -501,8 +502,8 @@ export async function getMasterCommercialAnalyticsData(period?: string | null, f
       leads: leadRows.length,
       conversionRate: leadRows.length > 0 ? `${Math.round((wonLeads / leadRows.length) * 100)}%` : "0%",
     },
-    eventsByType: countBy(eventRows.map((event) => event.event_type)),
-    leadsBySource: countBy(leadRows.map((lead) => lead.source ?? "Não informado")),
+    eventsByType: countBy(eventRows.map((event) => humanizeTrackingLabel(event.event_type))),
+    leadsBySource: countBy(leadRows.map((lead) => humanizeTrackingLabel(lead.source))),
     topClickedPackages: packageRows
       .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
@@ -523,7 +524,7 @@ export async function getMasterCommercialAnalyticsData(period?: string | null, f
     pagesByConversion: countBy(
       leadRows
         .filter((lead) => lead.status === "won" || lead.status === "converted")
-        .map((lead) => lead.source_page ?? "Não informado"),
+        .map((lead) => humanizeTrackingLabel(lead.source_page)),
     ),
     reputationRanking: Array.from(
       reviewRows.reduce((map, review) => {

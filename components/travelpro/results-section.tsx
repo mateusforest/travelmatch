@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MessageCircle, ChevronRight, Clock, MapPin, Star } from "lucide-react"
+import { MessageCircle, ChevronRight, Clock, MapPin, Star, Award, PackageIcon } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -15,6 +15,7 @@ import { createTravelerLead, registerCtaEvent, registerWhatsAppClick } from "@/a
 type Package = {
   id: string
   slug: string
+  title: string
   image: string
   destination: string
   agency: string
@@ -24,6 +25,19 @@ type Package = {
   duration: string
   match: number
   tags: string[]
+}
+
+type SearchAgency = {
+  id: string
+  slug: string | null
+  name: string
+  city: string
+  logo: string | null
+  description: string
+  rating: number
+  reviews: number
+  packageCount: number
+  specialties: string[]
 }
 
 type Relation<T> = T | T[] | null
@@ -49,15 +63,33 @@ type PackageRow = {
   agency_id: string | null
 }
 
+type AgencyRow = {
+  id: string
+  slug: string | null
+  agency_name: string
+  city: string | null
+  state: string | null
+  description: string | null
+  logo_url: string | null
+  packages?: {
+    status: string
+    title: string
+    destination: string
+    travel_categories?: Relation<{ name: string; slug: string }>
+  }[] | null
+}
+
 const firstRelation = <T,>(relation: Relation<T>): T | null =>
   Array.isArray(relation) ? relation[0] ?? null : relation
 
 export function ResultsSection({ query }: { query?: string }) {
   const [packages, setPackages] = useState<Package[]>([])
+  const [agencies, setAgencies] = useState<SearchAgency[]>([])
 
   useEffect(() => {
     if (!hasSupabaseEnv()) {
       setPackages([])
+      setAgencies([])
       return
     }
 
@@ -78,10 +110,17 @@ export function ResultsSection({ query }: { query?: string }) {
 
     const term = query?.trim()
 
-    Promise.all([request, settingsRequest])
-      .then(async ([{ data, error }, { data: settingsData }]) => {
-        if (error) {
+    const agenciesRequest = supabase
+      .from("agency_profiles")
+      .select("id,slug,agency_name,city,state,description,logo_url,packages(status,title,destination,travel_categories(name,slug))")
+      .eq("status", "active")
+      .limit(60)
+
+    Promise.all([request, settingsRequest, agenciesRequest])
+      .then(async ([{ data, error }, { data: settingsData }, { data: agenciesData, error: agenciesError }]) => {
+        if (error || agenciesError) {
           setPackages([])
+          setAgencies([])
           return
         }
 
@@ -158,7 +197,8 @@ export function ResultsSection({ query }: { query?: string }) {
           .map((pkg) => ({
           id: pkg.id,
           slug: pkg.slug,
-          image: pkg.image_url || "/placeholder.jpg",
+          title: pkg.title,
+          image: pkg.image_url || "/category-images/aventura.svg",
           destination: pkg.destination,
           agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "Agência",
           agencyId: pkg.agency_id,
@@ -185,6 +225,64 @@ export function ResultsSection({ query }: { query?: string }) {
           tags: [firstRelation(pkg.travel_categories)?.name].filter(Boolean) as string[],
         }))
         setPackages(next)
+
+        const agencyRows = ((agenciesData ?? []) as AgencyRow[])
+          .map((agency) => {
+            const publishedPackages = (agency.packages ?? []).filter((pkg) => pkg.status === "published")
+            const searchableValues = [
+              agency.agency_name,
+              agency.city,
+              agency.state,
+              agency.description,
+              ...publishedPackages.flatMap((pkg) => [
+                pkg.title,
+                pkg.destination,
+                firstRelation(pkg.travel_categories)?.name,
+                firstRelation(pkg.travel_categories)?.slug,
+              ]),
+            ]
+            const specialties = Array.from(new Set(
+              publishedPackages
+                .map((pkg) => firstRelation(pkg.travel_categories)?.name)
+                .filter(Boolean) as string[],
+            )).slice(0, 3)
+
+            return { agency, publishedPackages, searchableValues, specialties }
+          })
+          .filter(({ agency, publishedPackages, searchableValues }) =>
+            Boolean(agency.slug) &&
+            publishedPackages.length > 0 &&
+            (!normalizedTerm || searchableValues.some((value) => normalizeSearchText(value).includes(normalizedTerm))),
+          )
+          .slice(0, 4)
+
+        const agencyReputationEntries = await Promise.all(
+          agencyRows.map(async ({ agency }) => {
+            const { data: reputation } = await supabase.rpc("get_agency_reputation_summary", {
+              target_agency_id: agency.id,
+            })
+            const row = Array.isArray(reputation) ? reputation[0] : null
+            return [agency.id, row] as const
+          }),
+        )
+        const agencyReputationById = new Map(agencyReputationEntries)
+
+        setAgencies(agencyRows.map(({ agency, publishedPackages, specialties }) => {
+          const reputation = agencyReputationById.get(agency.id)
+
+          return {
+            id: agency.id,
+            slug: agency.slug,
+            name: agency.agency_name,
+            city: [agency.city, agency.state].filter(Boolean).join(", ") || "Brasil",
+            logo: agency.logo_url,
+            description: agency.description ?? "Perfil público em construção.",
+            rating: Number(reputation?.average_rating ?? 0),
+            reviews: Number(reputation?.review_count ?? 0),
+            packageCount: publishedPackages.length,
+            specialties,
+          }
+        }))
       })
   }, [query])
 
@@ -245,7 +343,7 @@ export function ResultsSection({ query }: { query?: string }) {
           </p>
         </motion.div>
 
-        {packages.length === 0 ? (
+        {packages.length === 0 && agencies.length === 0 ? (
           <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-primary/10">
               <MapPin className="h-6 w-6 text-primary" />
@@ -259,6 +357,7 @@ export function ResultsSection({ query }: { query?: string }) {
             </p>
           </div>
         ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {packages.map((pkg, index) => (
             <motion.div
@@ -295,13 +394,16 @@ export function ResultsSection({ query }: { query?: string }) {
 
                 {/* Content */}
                 <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-primary" />
-                        {pkg.destination}
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-foreground">
+                        {pkg.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground">{pkg.agency}</p>
+                      <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        {pkg.destination}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">{pkg.agency}</p>
                     </div>
                   </div>
 
@@ -351,6 +453,88 @@ export function ResultsSection({ query }: { query?: string }) {
             </motion.div>
           ))}
         </div>
+        {agencies.length > 0 && (
+          <div className="mt-12">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                  Agências compatíveis
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-foreground">
+                  Especialistas para sua busca
+                </h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {agencies.map((agency, index) => (
+                <motion.div
+                  key={agency.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="group"
+                >
+                  <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.04] transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
+                    <div className="mb-4 flex items-start gap-3">
+                      <div className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-primary/10">
+                        {agency.logo ? (
+                          <Image
+                            src={agency.logo}
+                            alt={agency.name}
+                            fill
+                            sizes="56px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <Award className="h-6 w-6 text-primary" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="truncate text-base font-semibold text-foreground">{agency.name}</h4>
+                        <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5 text-primary" />
+                          {agency.city}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                      {agency.description}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {agency.specialties.map((specialty) => (
+                        <span key={specialty} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          {specialty}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-auto flex items-center justify-between pt-5 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                        {agency.reviews > 0 ? agency.rating.toFixed(1) : "Novo"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <PackageIcon className="h-3.5 w-3.5 text-primary" />
+                        {agency.packageCount} pacotes
+                      </span>
+                    </div>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="mt-4 w-full rounded-xl border-border hover:border-primary/50 hover:bg-primary/5"
+                    >
+                      <Link href={agency.slug ? `/agencias/${agency.slug}` : "#"}>
+                        Ver perfil
+                        <ChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
         )}
 
         {/* View More */}

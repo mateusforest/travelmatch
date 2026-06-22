@@ -1,10 +1,11 @@
 "use client"
 
-import { Star, ChevronRight } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import { Award, ChevronRight, MapPin, Package, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import type { FeaturedAgency } from "@/lib/data/featured-agencies"
 
-// Plataforma 0km: sem mocks. As agências em destaque virão dos cadastros reais.
 type FeaturedAgenciesStripProps = {
   agencies: FeaturedAgency[]
 }
@@ -13,14 +14,15 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
   return (
     <section className="py-16 md:py-20">
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-            Agências <span className="text-primary">Destaques</span>
-          </h2>
-          <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
-            Ver todas
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div className="mb-8 flex items-end justify-between gap-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Curadoria TravelMatch
+            </p>
+            <h2 className="text-2xl font-bold text-foreground md:text-3xl">
+              Agências <span className="text-primary">em destaque</span>
+            </h2>
+          </div>
         </div>
 
         {agencies.length === 0 ? (
@@ -31,26 +33,68 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
             </p>
           </div>
         ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {agencies.map((agency, index) => (
-            <motion.div
-              key={agency.name}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="bg-card border border-border rounded-2xl p-5 flex flex-col items-center justify-center gap-3 shadow-sm shadow-black/[0.04] hover:border-primary/30 hover:shadow-md transition-all duration-300 cursor-pointer"
-            >
-              <span className="text-sm font-semibold text-foreground text-center tracking-tight">
-                {agency.name}
-              </span>
-              <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Star className="w-4 h-4 fill-primary text-primary" />
-                {agency.rating}
-              </span>
-            </motion.div>
-          ))}
-        </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {agencies.map((agency, index) => (
+              <motion.div
+                key={agency.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <Link
+                  href={agency.slug ? `/agencias/${agency.slug}` : "#"}
+                  className="group flex h-full gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm shadow-black/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
+                >
+                  <div className="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-primary/10">
+                    {agency.logoUrl ? (
+                      <Image
+                        src={agency.logoUrl}
+                        alt={agency.name}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <Award className="h-7 w-7 text-primary" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-semibold text-foreground">
+                          {agency.name}
+                        </h3>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5 text-primary" />
+                          {[agency.city, agency.state].filter(Boolean).join(", ") || "Brasil"}
+                        </p>
+                      </div>
+                      {(agency.pinned || agency.editorialLabel) && (
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                          {agency.editorialLabel || "Destaque"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                        {agency.rating}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Package className="h-3.5 w-3.5 text-primary" />
+                        {agency.publishedPackages} pacotes
+                      </span>
+                      <span className="ml-auto inline-flex items-center gap-1 font-medium text-primary">
+                        Ver perfil
+                        <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
     </section>

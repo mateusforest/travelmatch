@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { Clock, MapPin, Store } from "lucide-react"
+import { Clock, MapPin, Package, Store } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
 import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
@@ -29,7 +29,7 @@ export default async function PublicPackagePage({
           <div className="lg:col-span-2">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03]">
               <div className="relative aspect-[16/9] bg-secondary">
-                {pkg.image_url && (
+                {pkg.image_url ? (
                   <Image
                     src={pkg.image_url}
                     alt={pkg.title}
@@ -37,6 +37,10 @@ export default async function PublicPackagePage({
                     priority
                     className="object-cover"
                   />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/15 via-secondary to-primary/5">
+                    <Package className="h-10 w-10 text-primary" />
+                  </div>
                 )}
               </div>
               <div className="p-6">
@@ -80,7 +84,7 @@ export default async function PublicPackagePage({
                   packageId={pkg.id}
                   agencyId={pkg.agency_id}
                   eventType="view_agency"
-                  ctaLabel="Ver perfil da agencia"
+                  ctaLabel="Ver perfil da agência"
                   className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
                 >
                   Ver perfil da agência

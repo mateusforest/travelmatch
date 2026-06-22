@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { Globe, Instagram, MapPin, Package } from "lucide-react"
+import { Globe, Instagram, MapPin, Package, Phone, Star } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
 import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
@@ -28,7 +28,18 @@ export default async function PublicAgencyPage({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03]">
-              <div className="h-36 bg-gradient-to-r from-primary/30 to-primary/10" />
+              <div className="relative h-44 bg-gradient-to-r from-primary/30 to-primary/10">
+                {agency.banner_url && (
+                  <Image
+                    src={agency.banner_url}
+                    alt={agency.agency_name}
+                    fill
+                    priority
+                    className="object-cover"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/35 to-transparent" />
+              </div>
               <div className="px-6 pb-6">
                 <div className="-mt-10 mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-card bg-primary/10">
                   {agency.logo_url ? (
@@ -57,8 +68,17 @@ export default async function PublicAgencyPage({
                 )}
                 <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
-                    Nota {agency.average_rating.toFixed(1)} · {agency.review_count} avaliacoes · {agency.recommendation_rate}% recomendam
+                    <Star className="h-4 w-4 fill-primary text-primary" />
+                    {agency.review_count > 0
+                      ? `Nota ${agency.average_rating.toFixed(1)} · ${agency.review_count} avaliações · ${agency.recommendation_rate}% recomendam`
+                      : "Reputação em construção"}
                   </span>
+                  {agency.phone && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Phone className="h-4 w-4 text-primary" />
+                      {agency.phone}
+                    </span>
+                  )}
                   {agency.website && (
                     <span className="inline-flex items-center gap-1.5">
                       <Globe className="h-4 w-4 text-primary" />
@@ -93,22 +113,29 @@ export default async function PublicAgencyPage({
                       agencyId={agency.id}
                       eventType="view_package"
                       ctaLabel="Ver pacote"
-                      className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03] transition-shadow hover:shadow-md"
+                      className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
                     >
                       <div className="relative aspect-[16/9] bg-secondary">
-                        {pkg.image_url && (
+                        {pkg.image_url ? (
                           <Image
                             src={pkg.image_url}
                             alt={pkg.title}
                             fill
                             className="object-cover"
                           />
+                        ) : (
+                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/15 via-secondary to-primary/5">
+                            <Package className="h-8 w-8 text-primary" />
+                          </div>
                         )}
                       </div>
                       <div className="p-4">
                         <p className="text-xs text-muted-foreground">{pkg.destination}</p>
                         <h3 className="mt-1 font-semibold text-foreground">{pkg.title}</h3>
-                        <p className="mt-3 text-sm font-semibold text-foreground">{pkg.price}</p>
+                        <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                          <span className="font-semibold text-foreground">{pkg.price}</span>
+                          <span className="text-muted-foreground">{pkg.duration}</span>
+                        </div>
                       </div>
                     </TrackedLink>
                   ))}

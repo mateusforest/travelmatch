@@ -19,6 +19,8 @@ export type PublicAgency = {
   state: string | null
   description: string | null
   logo_url: string | null
+  banner_url: string | null
+  phone: string | null
   website: string | null
   instagram: string | null
   average_rating: number
@@ -86,7 +88,7 @@ export async function getPublicAgencyBySlug(slug: string): Promise<PublicAgency 
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("agency_profiles")
-    .select("id,slug,agency_name,city,state,description,logo_url,website,instagram,packages(id,slug,title,destination,price_from,image_url,duration_days,status)")
+    .select("id,slug,agency_name,city,state,description,logo_url,banner_url,phone,website,instagram,packages(id,slug,title,destination,price_from,image_url,duration_days,status)")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle()
@@ -109,6 +111,8 @@ export async function getPublicAgencyBySlug(slug: string): Promise<PublicAgency 
     state: agency.state,
     description: agency.description,
     logo_url: agency.logo_url,
+    banner_url: agency.banner_url,
+    phone: agency.phone,
     website: agency.website,
     instagram: agency.instagram,
     average_rating: Number(reputation?.average_rating ?? 0),

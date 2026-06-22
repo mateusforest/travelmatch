@@ -4,6 +4,7 @@ import { formatCurrencyBRL, formatDateBR } from "@/lib/format"
 import type { AgencyPackage } from "@/components/agencia/package-card"
 import { getPeriodRange } from "@/lib/period"
 import { calculateMatchScore } from "@/lib/match-score"
+import { humanizeTrackingLabel } from "@/lib/display-labels"
 
 type AgencyProfile = {
   id: string
@@ -595,8 +596,8 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       leads: leadRows.length,
       conversions: leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length,
     },
-    ctaEvents: countBy(eventRows.map((event) => event.event_type)),
-    leadSources: countBy(leadRows.map((lead) => lead.source ?? "Não informado")),
+    ctaEvents: countBy(eventRows.map((event) => humanizeTrackingLabel(event.event_type))),
+    leadSources: countBy(leadRows.map((lead) => humanizeTrackingLabel(lead.source))),
     topClickedPackages: packageRows
       .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
@@ -605,7 +606,7 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
       .filter((item) => item.value !== "0")
       .slice(0, 6),
-    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => lead.source_page ?? "Não informado")),
+    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => humanizeTrackingLabel(lead.source_page))),
     leadsByStatus: countBy(leadRows.map((lead) => leadStatusMap[lead.status] ?? lead.status)),
     timeline: Array.from(timelineMap.values()),
   }
