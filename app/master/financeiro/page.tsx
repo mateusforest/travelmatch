@@ -15,7 +15,7 @@ export default async function MasterFinanceiroPage() {
     { icon: DollarSign, label: "MRR", value: finance.mrr, hint: "Receita recorrente mensal" },
     { icon: TrendingUp, label: "ARR", value: finance.arr, hint: "Receita recorrente anual" },
     { icon: Building2, label: "Confirmado", value: finance.confirmedRevenue, hint: `${finance.activeSubscriptions} assinaturas` },
-    { icon: Layers, label: "Pendente", value: finance.pendingRevenue, hint: `${finance.activePromotions} promocoes ativas` },
+    { icon: Layers, label: "Pendente", value: finance.pendingRevenue, hint: `${finance.activePromotions} promoções ativas` },
   ]
 
   return (

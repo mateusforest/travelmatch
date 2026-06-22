@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation"
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server"
 import { formatCurrencyBRL } from "@/lib/format"
+import {
+  formatAnalyticsLevel,
+  formatBillingStatus,
+  formatGateway,
+  formatProductType,
+  formatPromotionType,
+} from "@/lib/billing-labels"
 
 type PlanRow = {
   id: string
@@ -36,8 +43,8 @@ export type AgencyBillingData = {
     analyticsLevel: string
     current: boolean
   }[]
-  promotions: { type: string; status: string; amount: string; period: string }[]
-  payments: { product: string; status: string; amount: string; createdAt: string }[]
+  promotions: { type: string; status: string; amount: string; period: string; reportUrl?: string | null }[]
+  payments: { product: string; status: string; amount: string; createdAt: string; gateway: string; invoiceUrl?: string | null }[]
 }
 
 export type MasterFinanceData = {
@@ -77,10 +84,10 @@ export async function getAgencyBillingData(): Promise<AgencyBillingData> {
   const fallback: AgencyBillingData = {
     planName: "Free",
     planSlug: "free",
-    status: "active",
-    renewalDate: "Sem renovacao",
+    status: "Ativo",
+    renewalDate: "sem renovação",
     packageUsage: "0 / 3",
-    analyticsLevel: "basic",
+    analyticsLevel: "Básico",
     packageLimit: 3,
     plans: [],
     promotions: [],
@@ -117,13 +124,13 @@ export async function getAgencyBillingData(): Promise<AgencyBillingData> {
       .eq("status", "published"),
     supabase
       .from("agency_promotions")
-      .select("type,status,amount,starts_at,ends_at,created_at")
+      .select("type,status,amount,starts_at,ends_at,created_at,campaign_report_url")
       .eq("agency_id", agencyId)
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
       .from("payment_intents")
-      .select("product_type,status,amount,created_at")
+      .select("product_type,status,amount,created_at,gateway,checkout_url")
       .eq("agency_id", agencyId)
       .order("created_at", { ascending: false })
       .limit(5),
@@ -138,19 +145,19 @@ export async function getAgencyBillingData(): Promise<AgencyBillingData> {
   return {
     planName: currentPlan.name,
     planSlug: currentPlan.slug,
-    status: subscriptionRow?.status ?? "active",
+    status: formatBillingStatus(subscriptionRow?.status ?? "active"),
     renewalDate: subscriptionRow?.expires_at
       ? new Date(subscriptionRow.expires_at).toLocaleDateString("pt-BR")
-      : "Sem renovacao",
+      : "sem renovação",
     packageUsage: `${publishedPackages ?? 0} / ${currentPlan.package_limit ?? "Ilimitado"}`,
-    analyticsLevel: currentPlan.analytics_level,
+    analyticsLevel: formatAnalyticsLevel(currentPlan.analytics_level),
     packageLimit: currentPlan.package_limit,
     plans: planRows.map((plan) => ({
       slug: plan.slug,
       name: plan.name,
       price: plan.price === 0 ? "R$ 0" : formatCurrencyBRL(plan.price),
       packageLimit: plan.package_limit ? `${plan.package_limit} pacotes` : "Pacotes ilimitados",
-      analyticsLevel: plan.analytics_level,
+      analyticsLevel: formatAnalyticsLevel(plan.analytics_level),
       current: plan.slug === currentPlan.slug,
     })),
     promotions: ((promotions ?? []) as {
@@ -159,26 +166,32 @@ export async function getAgencyBillingData(): Promise<AgencyBillingData> {
       amount: number
       starts_at: string | null
       ends_at: string | null
+      campaign_report_url?: string | null
     }[]).map((promotion) => ({
-      type: promotion.type,
-      status: promotion.status,
+      type: formatPromotionType(promotion.type),
+      status: formatBillingStatus(promotion.status),
       amount: formatCurrencyBRL(Number(promotion.amount ?? 0)),
       period: promotion.ends_at
-        ? `Ate ${new Date(promotion.ends_at).toLocaleDateString("pt-BR")}`
+        ? `Até ${new Date(promotion.ends_at).toLocaleDateString("pt-BR")}`
         : promotion.starts_at
           ? `Desde ${new Date(promotion.starts_at).toLocaleDateString("pt-BR")}`
-          : "Aguardando ativacao",
+          : "Aguardando ativação",
+      reportUrl: promotion.campaign_report_url,
     })),
     payments: ((payments ?? []) as {
       product_type: string
       status: string
       amount: number
       created_at: string
+      gateway?: string | null
+      checkout_url?: string | null
     }[]).map((payment) => ({
-      product: payment.product_type === "subscription" ? "Assinatura" : "Promocao",
-      status: payment.status,
+      product: formatProductType(payment.product_type),
+      status: formatBillingStatus(payment.status),
       amount: formatCurrencyBRL(Number(payment.amount ?? 0)),
       createdAt: new Date(payment.created_at).toLocaleDateString("pt-BR"),
+      gateway: formatGateway(payment.gateway),
+      invoiceUrl: payment.checkout_url,
     })),
   }
 }
@@ -217,7 +230,7 @@ export async function getMasterFinanceData(): Promise<MasterFinanceData> {
       .in("status", ["active", "completed"]),
     supabase
       .from("payment_intents")
-      .select("product_type,status,amount,created_at")
+      .select("product_type,status,amount,created_at,gateway")
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
@@ -237,6 +250,7 @@ export async function getMasterFinanceData(): Promise<MasterFinanceData> {
     status: string
     amount: number
     created_at: string
+    gateway?: string | null
   }[]
   const mrrNumber = subscriptionRows.reduce((total, row) => total + Number(row.subscription_plans?.[0]?.price ?? 0), 0)
   const sponsoredNumber = promotionRows.reduce((total, row) => total + Number(row.amount ?? 0), 0)
@@ -270,7 +284,7 @@ export async function getMasterFinanceData(): Promise<MasterFinanceData> {
     history: [
       ...paymentRows.slice(0, 4).map((row) => ({
         title: row.status === "paid" ? "Pagamento confirmado" : "Pagamento",
-        desc: `${row.product_type} · ${row.status}`,
+        desc: `${formatProductType(row.product_type)} · ${formatBillingStatus(row.status)} · ${formatGateway(row.gateway)}`,
         value: formatCurrencyBRL(Number(row.amount ?? 0)),
         when: new Date(row.created_at).toLocaleDateString("pt-BR"),
       })),
@@ -281,8 +295,8 @@ export async function getMasterFinanceData(): Promise<MasterFinanceData> {
         when: new Date(row.created_at).toLocaleDateString("pt-BR"),
       })),
       ...promotionRows.slice(0, 4).map((row) => ({
-        title: "Promocao",
-        desc: row.type,
+        title: "Promoção",
+        desc: `${formatPromotionType(row.type)} · ${formatBillingStatus(row.status)}`,
         value: formatCurrencyBRL(Number(row.amount ?? 0)),
         when: new Date(row.created_at).toLocaleDateString("pt-BR"),
       })),

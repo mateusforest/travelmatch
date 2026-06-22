@@ -49,13 +49,44 @@ const promotionOptions = [
 ] as const
 
 const planBenefits: Record<string, string[]> = {
-  free: ["3 pacotes", "Perfil público", "Recebimento de leads", "Avaliações", "Match básico"],
-  pro: ["30 pacotes", "Analytics completos", "Perfil público avançado", "Avaliações", "Match avançado", "Leads ilimitados"],
-  premium: ["Pacotes ilimitados", "Analytics avançados", "Perfil público avançado", "Match prioritário", "Leads ilimitados", "Prioridade em destaque orgânico"],
+  free: [
+    "Até 3 pacotes publicados",
+    "Perfil público",
+    "Recebimento de leads",
+    "Avaliações",
+    "Match básico",
+    "Analytics básico",
+    "Sem destaque pago incluso",
+    "Sem prioridade no match",
+    "Sem analytics avançado",
+  ],
+  pro: [
+    "Até 30 pacotes publicados",
+    "Analytics completos",
+    "Perfil público avançado",
+    "Avaliações",
+    "Match avançado",
+    "Leads ilimitados",
+    "Funil comercial",
+    "Timeline de leads",
+    "Sugestões do COS",
+  ],
+  premium: [
+    "Pacotes ilimitados",
+    "Analytics avançados",
+    "Perfil público avançado",
+    "Match prioritário leve",
+    "Leads ilimitados",
+    "Prioridade em destaque orgânico",
+    "Reputação avançada",
+    "Insights do COS",
+    "Acesso antecipado a recursos",
+  ],
 }
 
 export default async function AssinaturaPage() {
   const billing = await getAgencyBillingData()
+  const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_SITE_URL)
 
   return (
     <>
@@ -84,7 +115,7 @@ export default async function AssinaturaPage() {
             <Button
               type="submit"
               className="rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
-              disabled={billing.planSlug === "premium"}
+              disabled={billing.planSlug === "premium" || !stripeReady}
             >
               Fazer upgrade
             </Button>
@@ -111,24 +142,29 @@ export default async function AssinaturaPage() {
                 {plan.price}
               </span>
               {plan.slug !== "free" && (
-                <span className="pb-1 text-sm text-muted-foreground">/mes</span>
+                <span className="pb-1 text-sm text-muted-foreground">/mês</span>
               )}
             </div>
             <ul className="mt-5 space-y-2.5">
-              {(planBenefits[plan.slug] ?? [plan.packageLimit, `Analytics ${plan.analyticsLevel}`, "Perfil publico", "Leads e reputacao"]).map((feature) => (
+              {(planBenefits[plan.slug] ?? [plan.packageLimit, `Analytics ${plan.analyticsLevel}`, "Perfil público", "Leads e reputação"]).map((feature) => (
                 <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   {feature}
                 </li>
               ))}
             </ul>
+            {plan.slug === "premium" && (
+              <p className="mt-4 rounded-xl bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
+                Match prioritário leve nunca supera relevância e reputação.
+              </p>
+            )}
             {plan.slug === "free" ? (
               <Button
                 variant="outline"
                 className="mt-6 w-full rounded-full border-border hover:border-primary/40"
                 disabled
               >
-                {plan.current ? "Plano atual" : "Incluido"}
+                {plan.current ? "Plano atual" : "Incluído"}
               </Button>
             ) : (
               <form action={checkoutSubscription.bind(null, plan.slug as "pro" | "premium")}>
@@ -140,7 +176,7 @@ export default async function AssinaturaPage() {
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "border-border hover:border-primary/40"
                   }`}
-                  disabled={plan.current}
+                  disabled={plan.current || !stripeReady}
                 >
                   {plan.current ? "Plano atual" : "Selecionar"}
                 </Button>
@@ -157,10 +193,10 @@ export default async function AssinaturaPage() {
               <CreditCard className="h-5 w-5" />
             </span>
             <span>
-              Checkout Stripe ativo. Status do plano: {billing.status} · Renovação: {billing.renewalDate}
+              Gateway: Stripe · Plano atual: {billing.planName} · Status: {billing.status} · Próxima renovação/vencimento: {billing.renewalDate}
             </span>
           </div>
-          {billing.planSlug !== "free" && billing.status !== "canceled" && (
+          {billing.planSlug !== "free" && billing.status !== "Cancelado" && (
             <form action={cancelAgencySubscription}>
               <Button
                 type="submit"
@@ -172,6 +208,11 @@ export default async function AssinaturaPage() {
             </form>
           )}
         </div>
+        {!stripeReady && (
+          <p className="mt-3 rounded-xl border border-dashed border-border bg-secondary/30 p-3 text-sm text-muted-foreground">
+            Checkout Stripe preparado. Configure as chaves para ativar pagamentos reais.
+          </p>
+        )}
       </SectionCard>
 
       <SectionCard title="Produtos patrocinados" className="mt-6">
@@ -196,6 +237,7 @@ export default async function AssinaturaPage() {
                 type="submit"
                 variant="outline"
                 className="mt-4 w-full rounded-full border-border hover:border-primary/40"
+                disabled={!stripeReady}
               >
                 Comprar
               </Button>
@@ -219,7 +261,12 @@ export default async function AssinaturaPage() {
                 >
                   <div>
                     <p className="font-medium text-foreground">{payment.product}</p>
-                    <p className="text-xs text-muted-foreground">{payment.createdAt} · {payment.status}</p>
+                    <p className="text-xs text-muted-foreground">{payment.createdAt} · {payment.status} · {payment.gateway}</p>
+                    {payment.invoiceUrl && (
+                      <a href={payment.invoiceUrl} className="text-xs font-medium text-primary hover:underline">
+                        Ver fatura
+                      </a>
+                    )}
                   </div>
                   <span className="font-semibold text-foreground">{payment.amount}</span>
                 </li>
@@ -228,7 +275,7 @@ export default async function AssinaturaPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Promocoes">
+        <SectionCard title="Promoções">
           {billing.promotions.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
               Nenhuma promoção ativa ou comprada ainda.
@@ -243,6 +290,11 @@ export default async function AssinaturaPage() {
                   <div>
                     <p className="font-medium text-foreground">{promotion.type}</p>
                     <p className="text-xs text-muted-foreground">{promotion.period} · {promotion.status}</p>
+                    {promotion.reportUrl && (
+                      <a href={promotion.reportUrl} className="text-xs font-medium text-primary hover:underline">
+                        Ver relatório
+                      </a>
+                    )}
                   </div>
                   <span className="font-semibold text-foreground">{promotion.amount}</span>
                 </li>

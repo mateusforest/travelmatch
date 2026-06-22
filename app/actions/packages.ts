@@ -23,6 +23,9 @@ function numberFromText(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const packageLimitMessage =
+  "Você atingiu o limite de pacotes publicados do seu plano. Faça upgrade para continuar publicando."
+
 async function getPackageLimitState(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   agencyId: string,
@@ -83,7 +86,7 @@ export async function createAgencyPackage(input: PackageInput) {
   if (input.status === "published") {
     const limit = await getPackageLimitState(supabase, agency.id)
     if (!limit.allowed) {
-      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+      return { ok: false, message: packageLimitMessage }
     }
   }
 
@@ -160,7 +163,7 @@ export async function updateAgencyPackage(packageId: string, input: PackageInput
   if (input.status === "published") {
     const limit = await getPackageLimitState(supabase, agencyId, packageId)
     if (!limit.allowed) {
-      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+      return { ok: false, message: packageLimitMessage }
     }
   }
 
@@ -213,7 +216,7 @@ export async function setAgencyPackageStatus(packageId: string, status: "draft" 
   if (status === "published") {
     const limit = await getPackageLimitState(supabase, agencyId, packageId)
     if (!limit.allowed) {
-      return { ok: false, message: `Limite de ${limit.limit} pacotes publicados atingido pelo plano atual.` }
+      return { ok: false, message: packageLimitMessage }
     }
   }
 
