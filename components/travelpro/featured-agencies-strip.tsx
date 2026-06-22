@@ -53,7 +53,7 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
                         alt={agency.name}
                         fill
                         sizes="64px"
-                        className="object-cover"
+                        className="object-contain p-2"
                       />
                     ) : (
                       <Award className="h-7 w-7 text-primary" />

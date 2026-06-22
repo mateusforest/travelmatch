@@ -484,7 +484,7 @@ export function ResultsSection({ query }: { query?: string }) {
                             alt={agency.name}
                             fill
                             sizes="56px"
-                            className="object-cover"
+                            className="object-contain p-2"
                           />
                         ) : (
                           <Award className="h-6 w-6 text-primary" />

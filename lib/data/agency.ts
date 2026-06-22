@@ -3,7 +3,7 @@ import { hasSupabaseEnv, createSupabaseServerClient } from "@/lib/supabase/serve
 import { formatCurrencyBRL, formatDateBR } from "@/lib/format"
 import type { AgencyPackage } from "@/components/agencia/package-card"
 import { getPeriodRange } from "@/lib/period"
-import { calculateMatchScore } from "@/lib/match-score"
+import { calculateMatchScore, normalizeSearchText } from "@/lib/match-score"
 import { humanizeTrackingLabel } from "@/lib/display-labels"
 
 type AgencyProfile = {
@@ -43,7 +43,7 @@ type PackageRow = {
   featured: boolean
   created_at?: string
   updated_at?: string
-  travel_categories?: { name: string }[] | null
+  travel_categories?: { name: string; slug?: string | null }[] | null
   traveler_leads?: { count: number }[]
   package_views?: { count: number }[]
 }
@@ -67,7 +67,14 @@ type LeadRow = {
   notes: string | null
   last_contact_at: string | null
   created_at: string
-  packages?: { title: string; destination: string; description?: string | null }[] | null
+  packages?: {
+    title: string
+    destination: string
+    description?: string | null
+    price_from?: number | null
+    featured?: boolean | null
+    travel_categories?: { name: string; slug?: string | null }[] | null
+  }[] | null
 }
 
 type LeadTimelineRow = {
@@ -189,6 +196,78 @@ const leadStatusValueMap: Record<string, AgencyLead["statusValue"]> = {
   converted: "won",
   lost: "lost",
   archived: "archived",
+}
+
+const firstRelation = <T,>(relation: T | T[] | null | undefined): T | null =>
+  Array.isArray(relation) ? relation[0] ?? null : relation ?? null
+
+function parseBudgetRange(value?: string | null) {
+  if (!value) return null
+  const normalized = value.replace(/\./g, "").replace(",", ".")
+  const numbers = normalized.match(/\d+(?:\.\d+)?/g)?.map(Number).filter((item) => Number.isFinite(item)) ?? []
+  if (numbers.length === 0) return null
+  return Math.max(...numbers)
+}
+
+function calculateLeadMatchScore(lead: LeadRow, fallbackPackages: PackageRow[] = []) {
+  if (lead.lead_score && lead.lead_score > 0) {
+    return lead.lead_score
+  }
+
+  const linkedPackage = firstRelation(lead.packages)
+  const leadTerm = lead.desired_destination ?? linkedPackage?.destination ?? lead.message ?? ""
+  const search = {
+    query: leadTerm,
+    budget: parseBudgetRange(lead.budget_range),
+    travelDate: lead.travel_date,
+    travelersCount: lead.travelers_count,
+  }
+
+  const candidates = linkedPackage
+    ? [{
+      title: linkedPackage.title,
+      destination: linkedPackage.destination,
+      description: linkedPackage.description ?? lead.message ?? "",
+      categoryName: firstRelation(linkedPackage.travel_categories)?.name,
+      categorySlug: firstRelation(linkedPackage.travel_categories)?.slug,
+      priceFrom: linkedPackage.price_from,
+      featured: Boolean(linkedPackage.featured),
+      views: 0,
+      leads: 0,
+    }]
+    : fallbackPackages.map((pkg) => ({
+      title: pkg.title,
+      destination: pkg.destination,
+      description: pkg.description ?? "",
+      categoryName: firstRelation(pkg.travel_categories)?.name,
+      categorySlug: firstRelation(pkg.travel_categories)?.slug,
+      priceFrom: pkg.price_from,
+      featured: Boolean(pkg.featured),
+      views: pkg.package_views?.[0]?.count ?? 0,
+      leads: pkg.traveler_leads?.[0]?.count ?? 0,
+    }))
+
+  const scores = candidates.map((pkg) => calculateMatchScore(pkg, search))
+  const bestScore = Math.max(0, ...scores)
+
+  if (bestScore > 0) {
+    return bestScore
+  }
+
+  const normalizedLeadTerm = normalizeSearchText(leadTerm)
+  if (!normalizedLeadTerm) {
+    return 0
+  }
+
+  const compatible = candidates.some((pkg) =>
+    normalizeSearchText(pkg.destination).includes(normalizedLeadTerm) ||
+    normalizedLeadTerm.includes(normalizeSearchText(pkg.destination)) ||
+    normalizeSearchText(pkg.title).includes(normalizedLeadTerm) ||
+    normalizeSearchText(pkg.description).includes(normalizedLeadTerm) ||
+    normalizeSearchText(pkg.categoryName).includes(normalizedLeadTerm),
+  )
+
+  return compatible ? 45 : 0
 }
 
 const packageStatusMap: Record<string, AgencyPackage["status"]> = {
@@ -333,19 +412,20 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
 
   const { data: topPackagesData } = await supabase
     .from("packages")
-    .select("id,title,destination,traveler_leads(count),package_views(count)")
+    .select("id,title,destination,description,price_from,featured,traveler_leads(count),package_views(count),travel_categories(name,slug)")
     .eq("agency_id", agency.id)
     .eq("status", "published")
 
   const { data: recentLeadsData } = await supabase
     .from("traveler_leads")
-    .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination,description)")
+    .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination,description,price_from,featured,travel_categories(name,slug))")
     .eq("agency_id", agency.id)
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false })
     .limit(5)
 
-  const topViewedPackages = ((topPackagesData ?? []) as PackageRow[])
+  const publishedPackages = (topPackagesData ?? []) as PackageRow[]
+  const topViewedPackages = publishedPackages
     .map((pkg) => ({
       id: pkg.id,
       title: pkg.title,
@@ -380,7 +460,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     recommendationRate: Number(reputation?.recommendation_rate ?? 0),
     unansweredAlerts,
     topViewedPackages,
-    recentLeads: ((recentLeadsData ?? []) as LeadRow[]).map(mapLeadRow),
+    recentLeads: ((recentLeadsData ?? []) as LeadRow[]).map((lead) => mapLeadRow(lead, publishedPackages)),
   }
 }
 
@@ -394,7 +474,7 @@ export async function getAgencyPackages(): Promise<AgencyPackage[]> {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("packages")
-    .select("id,title,destination,price_from,status,image_url,featured,traveler_leads(count),package_views(count)")
+    .select("id,title,destination,description,price_from,status,image_url,featured,traveler_leads(count),package_views(count),travel_categories(name,slug)")
     .eq("agency_id", agency.id)
     .order("created_at", { ascending: false })
 
@@ -407,7 +487,20 @@ export async function getAgencyPackages(): Promise<AgencyPackage[]> {
     title: pkg.title,
     destination: pkg.destination,
     price: formatCurrencyBRL(pkg.price_from),
-    match: 0,
+    match: calculateMatchScore(
+      {
+        title: pkg.title,
+        destination: pkg.destination,
+        description: pkg.description ?? "",
+        categoryName: firstRelation(pkg.travel_categories)?.name,
+        categorySlug: firstRelation(pkg.travel_categories)?.slug,
+        priceFrom: pkg.price_from,
+        featured: Boolean(pkg.featured),
+        views: pkg.package_views?.[0]?.count ?? 0,
+        leads: pkg.traveler_leads?.[0]?.count ?? 0,
+      },
+      { query: pkg.destination },
+    ),
     views: pkg.package_views?.[0]?.count ?? 0,
     leads: pkg.traveler_leads?.[0]?.count ?? 0,
     status: packageStatusMap[pkg.status] ?? "Rascunho",
@@ -478,17 +571,24 @@ export async function getAgencyLeads(): Promise<AgencyLead[]> {
   }
 
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from("traveler_leads")
-    .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination)")
-    .eq("agency_id", agency.id)
-    .order("created_at", { ascending: false })
+  const [{ data, error }, { data: publishedPackages }] = await Promise.all([
+    supabase
+      .from("traveler_leads")
+      .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination,description,price_from,featured,travel_categories(name,slug))")
+      .eq("agency_id", agency.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("packages")
+      .select("id,title,destination,description,price_from,featured,traveler_leads(count),package_views(count),travel_categories(name,slug)")
+      .eq("agency_id", agency.id)
+      .eq("status", "published"),
+  ])
 
   if (error) {
     throw new Error(error.message)
   }
 
-  return ((data ?? []) as LeadRow[]).map(mapLeadRow)
+  return ((data ?? []) as LeadRow[]).map((lead) => mapLeadRow(lead, (publishedPackages ?? []) as PackageRow[]))
 }
 
 export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDetails | null> {
@@ -499,10 +599,10 @@ export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDe
   }
 
   const supabase = await createSupabaseServerClient()
-  const [{ data: lead, error }, { data: timeline, error: timelineError }] = await Promise.all([
+  const [{ data: lead, error }, { data: timeline, error: timelineError }, { data: publishedPackages }] = await Promise.all([
     supabase
       .from("traveler_leads")
-      .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination)")
+      .select("id,traveler_name,traveler_email,traveler_phone,desired_destination,message,status,source,source_page,cta_label,travel_date,travelers_count,budget_range,lead_score,priority,notes,last_contact_at,created_at,packages(title,destination,description,price_from,featured,travel_categories(name,slug))")
       .eq("id", leadId)
       .eq("agency_id", agency.id)
       .maybeSingle(),
@@ -512,6 +612,11 @@ export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDe
       .eq("lead_id", leadId)
       .eq("agency_id", agency.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("packages")
+      .select("id,title,destination,description,price_from,featured,traveler_leads(count),package_views(count),travel_categories(name,slug)")
+      .eq("agency_id", agency.id)
+      .eq("status", "published"),
   ])
 
   if (error || timelineError) {
@@ -523,7 +628,7 @@ export async function getAgencyLeadDetails(leadId: string): Promise<AgencyLeadDe
   }
 
   return {
-    ...mapLeadRow(lead as LeadRow),
+    ...mapLeadRow(lead as LeadRow, (publishedPackages ?? []) as PackageRow[]),
     agencyName: agency.agency_name,
     timeline: ((timeline ?? []) as LeadTimelineRow[]).map((event) => ({
       id: event.id,
@@ -612,7 +717,9 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
   }
 }
 
-function mapLeadRow(lead: LeadRow): AgencyLead {
+function mapLeadRow(lead: LeadRow, fallbackPackages: PackageRow[] = []): AgencyLead {
+  const linkedPackage = firstRelation(lead.packages)
+
   return {
     id: lead.id,
     name: lead.traveler_name ?? "Viajante",
@@ -621,17 +728,7 @@ function mapLeadRow(lead: LeadRow): AgencyLead {
     interest: lead.desired_destination ?? lead.message ?? "Interesse registrado",
     message: lead.message ?? "Sem mensagem",
     date: formatDateBR(lead.created_at),
-    match: lead.lead_score && lead.lead_score > 0 ? lead.lead_score : calculateMatchScore(
-      {
-        title: lead.packages?.[0]?.title ?? "",
-        destination: lead.packages?.[0]?.destination ?? "",
-        description: lead.packages?.[0]?.description ?? lead.message ?? "",
-        featured: false,
-        views: 0,
-        leads: 0,
-      },
-      { query: lead.desired_destination ?? lead.message ?? "" },
-    ),
+    match: calculateLeadMatchScore(lead, fallbackPackages),
     status: leadStatusMap[lead.status] ?? "Novo",
     statusValue: leadStatusValueMap[lead.status] ?? "new",
     source: lead.source ?? "Não informado",
@@ -643,7 +740,7 @@ function mapLeadRow(lead: LeadRow): AgencyLead {
     priority: lead.priority ?? "normal",
     notes: lead.notes ?? "",
     lastContactAt: lead.last_contact_at ? formatDateBR(lead.last_contact_at) : "Não informado",
-    packageTitle: lead.packages?.[0]?.title ?? "Sem pacote vinculado",
+    packageTitle: linkedPackage?.title ?? "Sem pacote vinculado",
   }
 }
 

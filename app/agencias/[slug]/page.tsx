@@ -48,7 +48,7 @@ export default async function PublicAgencyPage({
                       alt={agency.agency_name}
                       width={80}
                       height={80}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain p-2"
                     />
                   ) : (
                     <Package className="h-8 w-8 text-primary" />

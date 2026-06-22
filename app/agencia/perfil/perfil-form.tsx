@@ -158,7 +158,7 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
                 <label
                   htmlFor="logo"
                   className="mt-1.5 flex h-20 w-20 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 transition-colors hover:border-primary/40"
-                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" } : undefined}
                 >
                   {!logoUrl && <ImagePlus className="h-5 w-5 text-muted-foreground" />}
                   <input
@@ -328,8 +328,8 @@ export function PerfilForm({ profile }: { profile: AgencyProfileData | null }) {
               />
               <div className="px-5 pb-5">
                 <div
-                  className="-mt-8 mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card bg-primary/10 bg-cover bg-center"
-                  style={logoUrl ? { backgroundImage: `url(${logoUrl})` } : undefined}
+                  className="-mt-8 mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card bg-primary/10 bg-center bg-no-repeat"
+                  style={logoUrl ? { backgroundImage: `url(${logoUrl})`, backgroundSize: "contain" } : undefined}
                 >
                   {!logoUrl && <Store className="h-7 w-7 text-primary" />}
                 </div>
