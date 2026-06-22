@@ -75,6 +75,7 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
     setError(null)
     const categoryName = categories.find((category) => category.id === categoryId)?.name
     const result = await generatePackageDescription({
+      title,
       destination,
       durationDays,
       categoryName,
@@ -83,6 +84,9 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
 
     if (result.ok && result.description) {
       setDescription(result.description)
+      if (result.message) {
+        setError(result.message)
+      }
     } else {
       setError(result.message ?? "Não foi possível gerar a descrição.")
     }
@@ -316,6 +320,11 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
               Use o COS para gerar uma descrição persuasiva e ajuste como
               preferir.
             </p>
+            {error && (
+              <p className="mt-3 text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
           </div>
         )}
 

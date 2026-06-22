@@ -91,9 +91,13 @@ export default async function AnalyticsPage({
           </span>
           <div>
             <h2 className="text-base font-semibold text-foreground">Insights do COS</h2>
-            <p className="mt-1 text-sm leading-relaxed text-foreground/90">
-              Conforme os dados reais evoluírem, os principais sinais comerciais aparecem acima.
-            </p>
+            <div className="mt-2 space-y-2">
+              {analytics.cosInsights.map((insight, index) => (
+                <p key={index} className="text-sm leading-relaxed text-foreground/90">
+                  {insight}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
       </section>

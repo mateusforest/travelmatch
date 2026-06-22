@@ -17,10 +17,6 @@ import {
 } from "@/components/agencia/ui-bits"
 import { getAgencyDashboardData } from "@/lib/data/agency"
 
-// Sugestões do COS (assistente operacional) — conteúdo de produto, gerado em tempo real.
-// Plataforma 0km: sem mocks. As recomendações surgirão conforme houver dados da agência.
-const cosSuggestions: string[] = []
-
 export default async function AgenciaDashboardPage() {
   const dashboard = await getAgencyDashboardData()
   const stats = [
@@ -162,14 +158,14 @@ export default async function AgenciaDashboardPage() {
             Sugestões do COS
           </h2>
         </div>
-        {cosSuggestions.length === 0 ? (
+        {dashboard.cosSuggestions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card/70 p-4 text-sm leading-relaxed text-muted-foreground">
             Conforme sua agência publicar pacotes e receber leads, o COS trará
             recomendações personalizadas para melhorar sua performance aqui.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {cosSuggestions.map((tip, i) => (
+            {dashboard.cosSuggestions.map((tip, i) => (
               <div
                 key={i}
                 className="rounded-xl border border-border bg-card/70 p-4 text-sm leading-relaxed text-foreground/90"

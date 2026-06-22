@@ -5,6 +5,7 @@ import type { AgencyPackage } from "@/components/agencia/package-card"
 import { getPeriodRange } from "@/lib/period"
 import { calculateMatchScore, normalizeSearchText } from "@/lib/match-score"
 import { humanizeTrackingLabel } from "@/lib/display-labels"
+import { generateAnalyticsInsightsWithCos, generateDashboardSuggestionsWithCos } from "@/lib/cos"
 
 type AgencyProfile = {
   id: string
@@ -133,6 +134,7 @@ export type AgencyAnalyticsData = {
   conversionsByPage: { name: string; value: string }[]
   leadsByStatus: { name: string; value: string }[]
   timeline: { month: string; visitantes: number; leads: number; cliques: number }[]
+  cosInsights: string[]
 }
 
 export type AgencyDashboardData = {
@@ -157,6 +159,7 @@ export type AgencyDashboardData = {
     leads: number
   }[]
   recentLeads: AgencyLead[]
+  cosSuggestions: string[]
 }
 
 export type AgencyProfileData = AgencyProfile
@@ -323,6 +326,9 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
       unansweredAlerts: 0,
       topViewedPackages: [],
       recentLeads: [],
+      cosSuggestions: [
+        "Publique seu primeiro pacote para começar a gerar dados reais para o COS analisar.",
+      ],
     }
   }
 
@@ -424,6 +430,14 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     .order("created_at", { ascending: false })
     .limit(5)
 
+  const { count: activePromotions } = await supabase
+    .from("agency_promotions")
+    .select("id", { count: "exact", head: true })
+    .eq("agency_id", agency.id)
+    .eq("status", "active")
+    .lte("starts_at", new Date().toISOString())
+    .gte("ends_at", new Date().toISOString())
+
   const publishedPackages = (topPackagesData ?? []) as PackageRow[]
   const topViewedPackages = publishedPackages
     .map((pkg) => ({
@@ -441,6 +455,19 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     const source = lead.source || lead.source_page || "Não informado"
     sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1)
   }
+
+  const cosSuggestions = await generateDashboardSuggestionsWithCos({
+    activePackages: activePackages ?? 0,
+    leadsLast30Days: leadsLast30DaysTotal,
+    viewsLast30Days,
+    conversionRate,
+    unansweredAlerts,
+    averageRating: Number(reputation?.average_rating ?? 0),
+    reviewCount: Number(reputation?.review_count ?? 0),
+    plan: agency.plan,
+    activePromotions: activePromotions ?? 0,
+    topViewedPackages,
+  })
 
   return {
     activePackages: activePackages ?? 0,
@@ -461,6 +488,7 @@ export async function getAgencyDashboardData(): Promise<AgencyDashboardData> {
     unansweredAlerts,
     topViewedPackages,
     recentLeads: ((recentLeadsData ?? []) as LeadRow[]).map((lead) => mapLeadRow(lead, publishedPackages)),
+    cosSuggestions,
   }
 }
 
@@ -653,6 +681,9 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       conversionsByPage: [],
       leadsByStatus: [],
       timeline: [],
+      cosInsights: [
+        "Ainda não há dados suficientes para uma análise comercial. Publique pacotes e acompanhe os primeiros cliques e leads.",
+      ],
     }
   }
 
@@ -681,6 +712,18 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
     for (const item of items) map.set(item, (map.get(item) ?? 0) + 1)
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value: String(value) }))
   }
+  const ctaEventsRows = countBy(eventRows.map((event) => humanizeTrackingLabel(event.event_type)))
+  const leadSourceRows = countBy(leadRows.map((lead) => humanizeTrackingLabel(lead.source)))
+  const topClickedPackageRows = packageRows
+    .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
+    .filter((item) => item.value !== "0")
+    .slice(0, 6)
+  const topLeadPackageRows = packageRows
+    .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
+    .filter((item) => item.value !== "0")
+    .slice(0, 6)
+  const conversionsByPageRows = countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => humanizeTrackingLabel(lead.source_page)))
+  const leadsByStatusRows = countBy(leadRows.map((lead) => leadStatusMap[lead.status] ?? lead.status))
 
   const monthKey = (date: string) => new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(date))
   const timelineMap = new Map<string, { month: string; visitantes: number; leads: number; cliques: number }>()
@@ -693,6 +736,23 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
   viewRows.forEach((view) => ensureMonth(view.created_at).visitantes += 1)
   leadRows.forEach((lead) => ensureMonth(lead.created_at).leads += 1)
   eventRows.forEach((event) => ensureMonth(event.created_at).cliques += 1)
+  const timeline = Array.from(timelineMap.values())
+  const periodLabel = period ?? "30d"
+  const cosInsights = await generateAnalyticsInsightsWithCos({
+    periodLabel,
+    stats: {
+      views: viewRows.length,
+      clicks: eventRows.length,
+      leads: leadRows.length,
+      conversions: leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length,
+    },
+    ctaEvents: ctaEventsRows,
+    leadSources: leadSourceRows,
+    topClickedPackages: topClickedPackageRows,
+    topLeadPackages: topLeadPackageRows,
+    conversionsByPage: conversionsByPageRows,
+    leadsByStatus: leadsByStatusRows,
+  })
 
   return {
     stats: {
@@ -701,19 +761,14 @@ export async function getAgencyAnalyticsData(period?: string | null, from?: stri
       leads: leadRows.length,
       conversions: leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").length,
     },
-    ctaEvents: countBy(eventRows.map((event) => humanizeTrackingLabel(event.event_type))),
-    leadSources: countBy(leadRows.map((lead) => humanizeTrackingLabel(lead.source))),
-    topClickedPackages: packageRows
-      .map((pkg) => ({ name: pkg.title, value: String(pkg.package_views?.[0]?.count ?? 0) }))
-      .filter((item) => item.value !== "0")
-      .slice(0, 6),
-    topLeadPackages: packageRows
-      .map((pkg) => ({ name: pkg.title, value: String(pkg.traveler_leads?.[0]?.count ?? 0) }))
-      .filter((item) => item.value !== "0")
-      .slice(0, 6),
-    conversionsByPage: countBy(leadRows.filter((lead) => lead.status === "won" || lead.status === "converted").map((lead) => humanizeTrackingLabel(lead.source_page))),
-    leadsByStatus: countBy(leadRows.map((lead) => leadStatusMap[lead.status] ?? lead.status)),
-    timeline: Array.from(timelineMap.values()),
+    ctaEvents: ctaEventsRows,
+    leadSources: leadSourceRows,
+    topClickedPackages: topClickedPackageRows,
+    topLeadPackages: topLeadPackageRows,
+    conversionsByPage: conversionsByPageRows,
+    leadsByStatus: leadsByStatusRows,
+    timeline,
+    cosInsights,
   }
 }
 
