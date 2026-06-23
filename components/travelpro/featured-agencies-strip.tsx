@@ -43,7 +43,7 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
                 transition={{ duration: 0.4, delay: index * 0.05 }}
               >
                 <Link
-                  href={agency.slug ? `/agencias/${agency.slug}` : "#"}
+                  href={`/agencias/${agency.slug}`}
                   className="group flex h-full gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm shadow-black/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
                 >
                   <AgencyLogo

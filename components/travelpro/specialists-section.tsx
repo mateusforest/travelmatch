@@ -1,24 +1,104 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { ChevronRight, Star, Check } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { AgencyLogo } from "@/components/travelpro/agency-logo-image"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseEnv } from "@/lib/supabase/config"
 
 type Specialist = {
+  id: string
+  slug: string
   name: string
   match: number
   description: string
   tags: string[]
-  banner: string
-  logo: string
+  banner: string | null
+  logo: string | null
 }
 
-// Plataforma 0km: sem mocks. Os especialistas reais virão das agências cadastradas.
-const specialists: Specialist[] = []
+type AgencyRow = {
+  id: string
+  slug: string | null
+  agency_name: string
+  city: string | null
+  state: string | null
+  description: string | null
+  logo_url: string | null
+  banner_url: string | null
+  packages?: {
+    status: string
+    destination: string
+    image_url: string | null
+    travel_categories?: { name: string }[] | null
+  }[] | null
+}
 
 export function SpecialistsSection() {
+  const [specialists, setSpecialists] = useState<Specialist[]>([])
+
+  useEffect(() => {
+    if (!hasSupabaseEnv()) {
+      setSpecialists([])
+      return
+    }
+
+    const supabase = createSupabaseBrowserClient()
+    supabase
+      .from("agency_profiles")
+      .select("id,slug,agency_name,city,state,description,logo_url,banner_url,packages(status,destination,image_url,travel_categories(name))")
+      .eq("status", "active")
+      .limit(8)
+      .then(async ({ data, error }) => {
+        if (error) {
+          setSpecialists([])
+          return
+        }
+
+        const rows = (data ?? []) as AgencyRow[]
+        const reputationEntries = await Promise.all(
+          rows.map(async (agency) => {
+            const { data: reputation } = await supabase.rpc("get_agency_reputation_summary", {
+              target_agency_id: agency.id,
+            })
+            const row = Array.isArray(reputation) ? reputation[0] : null
+            return [agency.id, row] as const
+          }),
+        )
+        const reputationByAgency = new Map(reputationEntries)
+
+        setSpecialists(rows
+          .map((agency) => {
+            const packages = (agency.packages ?? []).filter((pkg) => pkg.status === "published")
+            const reputation = reputationByAgency.get(agency.id)
+            const specialties = Array.from(new Set(
+              packages.map((pkg) => pkg.travel_categories?.[0]?.name || pkg.destination).filter(Boolean) as string[],
+            )).slice(0, 3)
+
+            return {
+              id: agency.id,
+              slug: agency.slug ?? "",
+              name: agency.agency_name,
+              match: Math.max(70, Math.min(98, Math.round(Number(reputation?.reputation_score ?? 70)))),
+              description: agency.description ?? ([agency.city, agency.state].filter(Boolean).join(", ") || "Agência especialista em viagens personalizadas."),
+              tags: specialties.length > 0 ? specialties : packages.map((pkg) => pkg.destination).slice(0, 3),
+              banner: agency.banner_url ?? packages.find((pkg) => pkg.image_url)?.image_url ?? null,
+              logo: agency.logo_url,
+            }
+          })
+          .filter((agency) => agency.slug && agency.tags.length > 0)
+          .slice(0, 3))
+      })
+  }, [])
+
+  if (specialists.length === 0) {
+    return null
+  }
+
   return (
     <section className="py-24" id="especialistas">
       <div className="container mx-auto px-4 lg:px-8">
@@ -38,20 +118,6 @@ export function SpecialistsSection() {
           </p>
         </motion.div>
 
-        {specialists.length === 0 ? (
-          <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
-            <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-primary/10">
-              <Star className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Especialistas a caminho
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              As agências verificadas mais compatíveis com o seu perfil serão
-              recomendadas aqui em breve.
-            </p>
-          </div>
-        ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {specialists.map((specialist, index) => (
             <motion.div
@@ -65,12 +131,16 @@ export function SpecialistsSection() {
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-black/[0.04] hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 h-full flex flex-col">
                 {/* Banner */}
                 <div className="relative h-32 overflow-hidden">
-                  <Image
-                    src={specialist.banner}
-                    alt={specialist.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+                  {specialist.banner ? (
+                    <Image
+                      src={specialist.banner}
+                      alt={specialist.name}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="h-full bg-gradient-to-br from-primary/20 via-secondary to-primary/5" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
 
                   {/* Match Badge */}
@@ -114,21 +184,22 @@ export function SpecialistsSection() {
                   </div>
 
                   <Button
+                    asChild
                     variant="outline"
                     className="w-full rounded-xl border-border hover:border-primary/50 hover:bg-primary/5 mt-auto"
                   >
-                    Ver especialista
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <Link href={`/agencias/${specialist.slug}`}>
+                      Ver especialista
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Link>
                   </Button>
                 </div>
               </div>
             </motion.div>
           ))}
         </div>
-        )}
 
         {/* CTA */}
-        {specialists.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -137,15 +208,17 @@ export function SpecialistsSection() {
           className="text-center mt-12"
         >
           <Button
+            asChild
             variant="outline"
             size="lg"
             className="rounded-full px-8 border-border hover:border-primary/50 hover:bg-primary/5"
           >
-            Ver mais especialistas
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <Link href="#agencias">
+              Ver mais especialistas
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Link>
           </Button>
         </motion.div>
-        )}
       </div>
     </section>
   )

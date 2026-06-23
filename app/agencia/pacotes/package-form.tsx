@@ -134,8 +134,13 @@ export function PackageForm({ pkg }: { pkg?: AgencyPackageDetails }) {
       : await uploadPackageDraftImage(formData)
 
     if (result.ok && result.url) {
-      setImageUrl(result.url)
-      setGalleryImages((current) => [...current, result.url!].slice(0, 15))
+      const isCoverUpload = "isCover" in result && result.isCover
+      if (!imageUrl || isCoverUpload) {
+        setImageUrl(result.url)
+      }
+      setGalleryImages((current) => (
+        current.includes(result.url!) ? current : [...current, result.url!].slice(0, 15)
+      ))
     } else if (result.message) {
       setError(result.message)
     }

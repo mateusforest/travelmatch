@@ -257,7 +257,7 @@ export async function uploadPackageImage(packageId: string, formData: FormData) 
 
   const { data: pkg, error: pkgError } = await supabase
     .from("packages")
-    .select("id")
+    .select("id,image_url")
     .eq("id", packageId)
     .eq("agency_id", agencyId)
     .maybeSingle()
@@ -277,27 +277,40 @@ export async function uploadPackageImage(packageId: string, formData: FormData) 
   }
 
   const { data } = supabase.storage.from("travelmatch-images").getPublicUrl(path)
-  const { error } = await supabase
-    .from("packages")
-    .update({ image_url: data.publicUrl })
-    .eq("id", packageId)
-    .eq("agency_id", agencyId)
+  const shouldSetCover = !pkg.image_url
 
-  if (error) {
-    return { ok: false, message: error.message }
+  if (shouldSetCover) {
+    const { error } = await supabase
+      .from("packages")
+      .update({ image_url: data.publicUrl })
+      .eq("id", packageId)
+      .eq("agency_id", agencyId)
+
+    if (error) {
+      return { ok: false, message: error.message }
+    }
   }
+
+  const { data: lastImage } = await supabase
+    .from("package_gallery_images")
+    .select("position")
+    .eq("package_id", packageId)
+    .eq("agency_id", agencyId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   await supabase.from("package_gallery_images").insert({
     package_id: packageId,
     agency_id: agencyId,
     image_url: data.publicUrl,
     storage_path: path,
-    position: 0,
+    position: (lastImage?.position ?? -1) + 1,
   })
 
   revalidatePath("/agencia/pacotes")
   revalidatePath(`/agencia/pacotes/${packageId}`)
-  return { ok: true, url: data.publicUrl }
+  return { ok: true, url: data.publicUrl, isCover: shouldSetCover }
 }
 
 export async function removePackageGalleryImage(packageId: string, imageUrl: string) {

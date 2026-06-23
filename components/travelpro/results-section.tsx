@@ -10,7 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
 import { calculateMatchScore, defaultMatchSettings, normalizeSearchText, type MatchSettings } from "@/lib/match-score"
-import { createTravelerLead, registerCtaEvent, registerWhatsAppClick } from "@/app/actions/public"
+import { registerCtaEvent, registerWhatsAppClick } from "@/app/actions/public"
 import { AgencyLogo } from "@/components/travelpro/agency-logo-image"
 
 type Package = {
@@ -21,6 +21,7 @@ type Package = {
   destination: string
   agency: string
   agencyId: string | null
+  agencyPhone: string | null
   categorySlug: string | null
   price: string
   duration: string
@@ -53,8 +54,9 @@ type PackageRow = {
   price_from: number | null
   duration_days: number | null
   featured: boolean
-  agency_profiles: Relation<{
+    agency_profiles: Relation<{
     agency_name: string
+    phone: string | null
     status: string
     agency_subscriptions?: { status: string; subscription_plans?: { priority_level: number }[] | null }[] | null
   }>
@@ -103,7 +105,7 @@ export function ResultsSection({ query }: { query?: string }) {
 
     let request = supabase
       .from("packages")
-      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,status,agency_subscriptions(status,subscription_plans(priority_level))),travel_categories(name,slug),package_views(count),traveler_leads(count)")
+      .select("id,slug,title,agency_id,image_url,destination,description,price_from,duration_days,featured,agency_profiles(agency_name,phone,status,agency_subscriptions(status,subscription_plans(priority_level))),travel_categories(name,slug),package_views(count),traveler_leads(count)")
       .eq("status", "published")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false })
@@ -203,6 +205,7 @@ export function ResultsSection({ query }: { query?: string }) {
           destination: pkg.destination,
           agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "Agência",
           agencyId: pkg.agency_id,
+          agencyPhone: firstRelation(pkg.agency_profiles)?.phone ?? null,
           categorySlug: firstRelation(pkg.travel_categories)?.slug ?? null,
           price: formatCurrencyBRL(pkg.price_from),
           duration: pkg.duration_days ? `${pkg.duration_days} dias` : "Sob consulta",
@@ -287,27 +290,26 @@ export function ResultsSection({ query }: { query?: string }) {
       })
   }, [query])
 
-  const registerInterest = (pkg: Package, message: string) => {
-    if (!hasSupabaseEnv()) {
+  const phoneToWhatsAppUrl = (phone: string | null) => {
+    const digits = phone?.replace(/\D/g, "") ?? ""
+    if (!digits) return null
+    const withCountryCode = digits.startsWith("55") ? digits : `55${digits}`
+    return `https://wa.me/${withCountryCode}`
+  }
+
+  const openWhatsApp = (pkg: Package) => {
+    const url = phoneToWhatsAppUrl(pkg.agencyPhone)
+    if (!url || !hasSupabaseEnv()) {
       return
     }
 
-    void createTravelerLead({
-      package_id: pkg.id,
-      agency_id: pkg.agencyId,
-      desired_destination: pkg.destination,
-      category_slug: pkg.categorySlug,
-      message,
-      source: "search_results",
-      source_page: query ? `/?busca=${query}` : "/",
-      cta_label: "WhatsApp",
-    })
     void registerWhatsAppClick({
       package_id: pkg.id,
       agency_id: pkg.agencyId,
       source_page: query ? `/?busca=${query}` : "/",
       cta_label: "WhatsApp",
     })
+    window.open(url, "_blank", "noopener,noreferrer")
   }
 
   const registerPackageClick = (pkg: Package) => {
@@ -442,8 +444,10 @@ export function ResultsSection({ query }: { query?: string }) {
                       </Link>
                     </Button>
                     <Button
-                      onClick={() => registerInterest(pkg, "Solicitou contato via WhatsApp")}
+                      onClick={() => openWhatsApp(pkg)}
+                      disabled={!phoneToWhatsAppUrl(pkg.agencyPhone)}
                       className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                      title={phoneToWhatsAppUrl(pkg.agencyPhone) ? "Abrir WhatsApp" : "Agência sem WhatsApp cadastrado"}
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       WhatsApp
@@ -516,7 +520,7 @@ export function ResultsSection({ query }: { query?: string }) {
                       variant="outline"
                       className="mt-4 w-full rounded-xl border-border hover:border-primary/50 hover:bg-primary/5"
                     >
-                      <Link href={agency.slug ? `/agencias/${agency.slug}` : "#"}>
+                      <Link href={`/agencias/${agency.slug}`}>
                         Ver perfil
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </Link>
@@ -542,6 +546,8 @@ export function ResultsSection({ query }: { query?: string }) {
           <Button
             variant="outline"
             size="lg"
+            disabled
+            title="Mais opções serão exibidas conforme novas agências publicarem pacotes."
             className="rounded-full px-8 border-border hover:border-primary/50 hover:bg-primary/5"
           >
             Ver mais opções

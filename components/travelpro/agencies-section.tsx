@@ -180,7 +180,7 @@ export function AgenciesSection() {
                     variant="outline"
                     className="mt-4 w-full rounded-xl border-border hover:border-primary/50 hover:bg-primary/5"
                   >
-                    <Link href={agency.slug ? `/agencias/${agency.slug}` : "#"}>
+                    <Link href={`/agencias/${agency.slug}`}>
                       Ver perfil
                       <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>

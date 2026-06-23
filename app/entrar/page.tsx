@@ -265,6 +265,7 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  disabled
                   className="w-full h-12 bg-transparent border-border/50 hover:bg-secondary/50 rounded-xl font-medium transition-all duration-300"
                 >
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -287,6 +288,9 @@ export default function LoginPage() {
                   </svg>
                   Continuar com Google
                 </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Login Google será disponibilizado em breve.
+                </p>
               </form>
 
               {/* Create Account */}
