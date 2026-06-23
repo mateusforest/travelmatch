@@ -1,21 +1,20 @@
 insert into public.travel_categories (name, slug, image_url, active)
 values
-  ('Praia', 'praia', '/category-images/praia.svg', true),
-  ('Europa', 'europa', '/category-images/europa.svg', true),
-  ('Estados Unidos', 'estados-unidos', '/category-images/estados-unidos.svg', true),
-  ('América do Sul', 'america-do-sul', '/category-images/america-do-sul.svg', true),
-  ('Caribe', 'caribe', '/category-images/caribe.svg', true),
-  ('Cruzeiros', 'cruzeiros', '/category-images/cruzeiros.svg', true),
-  ('Disney', 'disney', '/category-images/disney.svg', true),
-  ('Lua de Mel', 'lua-de-mel', '/category-images/lua-de-mel.svg', true),
-  ('Família', 'familia', '/category-images/familia.svg', true),
-  ('Aventura', 'aventura', '/category-images/aventura.svg', true),
-  ('Luxo', 'luxo', '/category-images/luxo.svg', true),
-  ('Neve', 'neve', '/category-images/neve.svg', true),
-  ('Exóticos', 'exoticos', '/category-images/exoticos.svg', true),
-  ('Intercâmbio', 'intercambio', '/category-images/intercambio.svg', true),
-  ('Grupos', 'grupos', '/category-images/grupos.svg', true),
-  ('Corporativo', 'corporativo', '/category-images/corporativo.svg', true)
+  ('Europa', 'europa', '/category-photos/europa.jpg', true),
+  ('Estados Unidos', 'estados-unidos', '/category-photos/estados-unidos.jpg', true),
+  ('América do Sul', 'america-do-sul', '/category-photos/america-do-sul.jpg', true),
+  ('Caribe', 'caribe', '/category-photos/caribe.jpg', true),
+  ('Cruzeiros', 'cruzeiros', '/category-photos/cruzeiros.jpg', true),
+  ('Disney', 'disney', '/category-photos/disney.jpg', true),
+  ('Lua de Mel', 'lua-de-mel', '/category-photos/lua-de-mel.jpg', true),
+  ('Família', 'familia', '/category-photos/familia.jpg', true),
+  ('Aventura', 'aventura', '/category-photos/aventura.jpg', true),
+  ('Luxo', 'luxo', '/category-photos/luxo.jpg', true),
+  ('Neve', 'neve', '/category-photos/neve.jpg', true),
+  ('Exóticos', 'exoticos', '/category-photos/exoticos.jpg', true),
+  ('Intercâmbio', 'intercambio', '/category-photos/intercambio.jpg', true),
+  ('Grupos', 'grupos', '/category-photos/grupos.jpg', true),
+  ('Corporativo', 'corporativo', '/category-photos/corporativo.jpg', true)
 on conflict (slug) do update
 set
   name = excluded.name,

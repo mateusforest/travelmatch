@@ -15,77 +15,77 @@ type Category = {
 
 const categoryVisuals: Record<string, { image: string; description: string; order: number }> = {
   europa: {
-    image: "/category-images/europa.svg",
+    image: "/category-photos/europa.jpg",
     description: "Roteiros clássicos e experiências exclusivas",
     order: 1,
   },
   "estados-unidos": {
-    image: "/category-images/estados-unidos.svg",
+    image: "/category-photos/estados-unidos.jpg",
     description: "Cidades, parques e road trips",
     order: 2,
   },
   caribe: {
-    image: "/category-images/caribe.svg",
+    image: "/category-photos/caribe.jpg",
     description: "Praias, resorts e descanso",
     order: 3,
   },
   disney: {
-    image: "/category-images/disney.svg",
+    image: "/category-photos/disney.jpg",
     description: "Experiências mágicas para todas as idades",
     order: 4,
   },
   cruzeiros: {
-    image: "/category-images/cruzeiros.svg",
+    image: "/category-photos/cruzeiros.jpg",
     description: "Viagens completas em alto-mar",
     order: 5,
   },
   "lua-de-mel": {
-    image: "/category-images/lua-de-mel.svg",
+    image: "/category-photos/lua-de-mel.jpg",
     description: "Viagens para celebrar histórias",
     order: 6,
   },
   familia: {
-    image: "/category-images/familia.svg",
+    image: "/category-photos/familia.jpg",
     description: "Momentos para viver juntos",
     order: 7,
   },
   intercambio: {
-    image: "/category-images/intercambio.svg",
+    image: "/category-photos/intercambio.jpg",
     description: "Estudo e vivência internacional",
     order: 8,
   },
   corporativo: {
-    image: "/category-images/corporativo.svg",
+    image: "/category-photos/corporativo.jpg",
     description: "Viagens e eventos de negócios",
     order: 9,
   },
   neve: {
-    image: "/category-images/neve.svg",
+    image: "/category-photos/neve.jpg",
     description: "Destinos de inverno ao redor do mundo",
     order: 10,
   },
   luxo: {
-    image: "/category-images/luxo.svg",
+    image: "/category-photos/luxo.jpg",
     description: "Experiências exclusivas",
     order: 11,
   },
   aventura: {
-    image: "/category-images/aventura.svg",
+    image: "/category-photos/aventura.jpg",
     description: "Natureza, trilhas e adrenalina",
     order: 12,
   },
   "america-do-sul": {
-    image: "/category-images/america-do-sul.svg",
+    image: "/category-photos/america-do-sul.jpg",
     description: "Destinos próximos e inesquecíveis",
     order: 13,
   },
   grupos: {
-    image: "/category-images/grupos.svg",
+    image: "/category-photos/grupos.jpg",
     description: "Viagens compartilhadas",
     order: 14,
   },
   exoticos: {
-    image: "/category-images/exoticos.svg",
+    image: "/category-photos/exoticos.jpg",
     description: "Experiências fora do comum",
     order: 15,
   },
@@ -93,6 +93,7 @@ const categoryVisuals: Record<string, { image: string; description: string; orde
 
 export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => void }) {
   const [categories, setCategories] = useState<Category[]>([])
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!hasSupabaseEnv()) {
@@ -139,6 +140,7 @@ export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
           {visibleCategories.map((category, index) => {
             const visual = categoryVisuals[category.slug]
+            const imageFailed = failedImages.has(category.slug)
 
             return (
               <motion.button
@@ -152,13 +154,18 @@ export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => 
                 onClick={() => onSearch?.(category.name)}
               >
                 <div className="relative aspect-[5/6] overflow-hidden rounded-2xl border border-white/10 bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/10">
-                  <Image
-                    src={visual.image}
-                    alt={category.name}
-                    fill
-                    sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  />
+                  {imageFailed ? (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/40 via-foreground/70 to-primary/20" />
+                  ) : (
+                    <Image
+                      src={visual.image}
+                      alt={category.name}
+                      fill
+                      sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      onError={() => setFailedImages((current) => new Set(current).add(category.slug))}
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5 transition-opacity duration-500" />
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.20),transparent_34%)] opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
