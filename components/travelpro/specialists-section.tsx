@@ -151,13 +151,11 @@ export function SpecialistsSection() {
 
                   {/* Logo */}
                   <div className="absolute -bottom-6 left-4">
-                    <div className="h-16 w-16 rounded-xl border border-border bg-card shadow-lg">
-                      <AgencyLogo
-                        src={specialist.logo}
-                        name={specialist.name}
-                        className="h-full w-full rounded-xl"
-                      />
-                    </div>
+                    <AgencyLogo
+                      src={specialist.logo}
+                      name={specialist.name}
+                      className="h-16 w-16 rounded-xl border border-border bg-white shadow-lg"
+                    />
                   </div>
                 </div>
 

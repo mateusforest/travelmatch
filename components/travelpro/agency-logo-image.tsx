@@ -19,12 +19,12 @@ export function AgencyLogo({
   const hasLogo = Boolean(logoSrc)
 
   return (
-    <div className={`grid place-items-center overflow-hidden ${hasLogo ? "bg-transparent" : "bg-primary/10"} ${className}`}>
+    <div className={`grid place-items-center overflow-hidden ${hasLogo ? "bg-white" : "bg-primary/10"} ${className}`}>
       {hasLogo ? (
         <img
           src={logoSrc ?? undefined}
           alt={name}
-          className="block h-full w-full object-contain"
+          className="block h-[85%] w-[85%] object-contain object-center"
           onError={() => setFailed(true)}
         />
       ) : (
