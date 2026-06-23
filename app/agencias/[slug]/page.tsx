@@ -81,13 +81,13 @@ export default async function PublicAgencyPage({
                     </span>
                   )}
                   {websiteHref && (
-                    <Link href={websiteHref} target="_blank" className="inline-flex items-center gap-1.5 hover:text-foreground">
+                    <Link href={websiteHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
                       <Globe className="h-4 w-4 text-primary" />
                       {agency.website}
                     </Link>
                   )}
                   {instagramHref && (
-                    <Link href={instagramHref} target="_blank" className="inline-flex items-center gap-1.5 hover:text-foreground">
+                    <Link href={instagramHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
                       <Instagram className="h-4 w-4 text-primary" />
                       {agency.instagram}
                     </Link>

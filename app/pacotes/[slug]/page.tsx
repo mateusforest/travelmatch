@@ -113,6 +113,7 @@ export default async function PublicPackagePage({
                 <TrackedLink
                   href={whatsappUrl}
                   target="_blank"
+                  rel="noopener noreferrer"
                   packageId={pkg.id}
                   agencyId={pkg.agency_id}
                   eventType="whatsapp_click"

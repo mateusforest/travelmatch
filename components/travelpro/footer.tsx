@@ -37,6 +37,7 @@ export function Footer() {
             <Link
               href="https://travelpro.com.br"
               target="_blank"
+              rel="noopener noreferrer"
               className="hover:text-primary transition-colors"
             >
               TravelPro
@@ -48,6 +49,7 @@ export function Footer() {
             <Link
               href="https://instagram.com/travelpro"
               target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
             >
               <Instagram className="w-5 h-5" />
