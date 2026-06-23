@@ -2,29 +2,29 @@
 
 import { useState } from "react"
 
-type AgencyLogoImageProps = {
+type AgencyLogoProps = {
   src?: string | null
   name: string
   className?: string
-  imageClassName?: string
 }
 
-export function AgencyLogoImage({
+export function AgencyLogo({
   src,
   name,
   className = "",
-  imageClassName = "",
-}: AgencyLogoImageProps) {
+}: AgencyLogoProps) {
   const [failed, setFailed] = useState(false)
   const initial = name.trim().charAt(0).toUpperCase() || "T"
+  const logoSrc = src && !failed ? src : null
+  const hasLogo = Boolean(logoSrc)
 
   return (
-    <div className={`grid place-items-center overflow-hidden bg-primary/10 ${className}`}>
-      {src && !failed ? (
+    <div className={`grid place-items-center overflow-hidden ${hasLogo ? "bg-transparent" : "bg-primary/10"} ${className}`}>
+      {hasLogo ? (
         <img
-          src={src}
+          src={logoSrc ?? undefined}
           alt={name}
-          className={`h-full w-full object-contain ${imageClassName}`}
+          className="block h-full w-full object-contain"
           onError={() => setFailed(true)}
         />
       ) : (

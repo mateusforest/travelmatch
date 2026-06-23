@@ -11,7 +11,7 @@ import { hasSupabaseEnv } from "@/lib/supabase/config"
 import { formatCurrencyBRL } from "@/lib/format"
 import { calculateMatchScore, defaultMatchSettings, normalizeSearchText, type MatchSettings } from "@/lib/match-score"
 import { createTravelerLead, registerCtaEvent, registerWhatsAppClick } from "@/app/actions/public"
-import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
+import { AgencyLogo } from "@/components/travelpro/agency-logo-image"
 
 type Package = {
   id: string
@@ -478,11 +478,10 @@ export function ResultsSection({ query }: { query?: string }) {
                 >
                   <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.04] transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
                     <div className="mb-4 flex items-start gap-3">
-                      <AgencyLogoImage
+                      <AgencyLogo
                         src={agency.logo}
                         name={agency.name}
-                        className="h-14 w-14 shrink-0 rounded-2xl border border-border"
-                        imageClassName="p-2"
+                        className="h-16 w-16 shrink-0 rounded-2xl border border-border"
                       />
                       <div className="min-w-0">
                         <h4 className="truncate text-base font-semibold text-foreground">{agency.name}</h4>

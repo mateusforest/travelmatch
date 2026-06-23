@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ChevronRight, MapPin, Package, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import type { FeaturedAgency } from "@/lib/data/featured-agencies"
-import { AgencyLogoImage } from "@/components/travelpro/agency-logo-image"
+import { AgencyLogo } from "@/components/travelpro/agency-logo-image"
 
 type FeaturedAgenciesStripProps = {
   agencies: FeaturedAgency[]
@@ -46,11 +46,10 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
                   href={agency.slug ? `/agencias/${agency.slug}` : "#"}
                   className="group flex h-full gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm shadow-black/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
                 >
-                  <AgencyLogoImage
+                  <AgencyLogo
                     src={agency.logoUrl}
                     name={agency.name}
                     className="h-16 w-16 shrink-0 rounded-2xl border border-border"
-                    imageClassName="p-2"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">

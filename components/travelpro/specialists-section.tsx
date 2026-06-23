@@ -4,6 +4,7 @@ import Image from "next/image"
 import { ChevronRight, Star, Check } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { AgencyLogo } from "@/components/travelpro/agency-logo-image"
 
 type Specialist = {
   name: string
@@ -80,13 +81,11 @@ export function SpecialistsSection() {
 
                   {/* Logo */}
                   <div className="absolute -bottom-6 left-4">
-                    <div className="w-16 h-16 rounded-xl bg-card border border-border overflow-hidden shadow-lg">
-                      <Image
+                    <div className="h-16 w-16 rounded-xl border border-border bg-card shadow-lg">
+                      <AgencyLogo
                         src={specialist.logo}
-                        alt={specialist.name}
-                        width={64}
-                        height={64}
-                        className="object-cover"
+                        name={specialist.name}
+                        className="h-full w-full rounded-xl"
                       />
                     </div>
                   </div>
