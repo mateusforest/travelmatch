@@ -17,7 +17,7 @@ type Package = {
   id: string
   slug: string
   title: string
-  image: string
+  image: string | null
   destination: string
   agency: string
   agencyId: string | null
@@ -54,7 +54,7 @@ type PackageRow = {
   price_from: number | null
   duration_days: number | null
   featured: boolean
-    agency_profiles: Relation<{
+  agency_profiles: Relation<{
     agency_name: string
     phone: string | null
     status: string
@@ -201,7 +201,7 @@ export function ResultsSection({ query }: { query?: string }) {
           id: pkg.id,
           slug: pkg.slug,
           title: pkg.title,
-          image: pkg.image_url || "/category-images/aventura.svg",
+          image: pkg.image_url,
           destination: pkg.destination,
           agency: firstRelation(pkg.agency_profiles)?.agency_name ?? "Agência",
           agencyId: pkg.agency_id,
@@ -327,14 +327,14 @@ export function ResultsSection({ query }: { query?: string }) {
   }
 
   return (
-    <section className="py-24 relative" id="pacotes">
+    <section className="relative py-20 md:py-24" id="pacotes">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="mb-10 text-center md:mb-14"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 text-balance">
             Pacotes mais compatíveis com{" "}
@@ -371,15 +371,19 @@ export function ResultsSection({ query }: { query?: string }) {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className="group"
             >
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-black/[0.04] hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10">
+              <div className="overflow-hidden rounded-[1.35rem] border border-border bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10">
                 {/* Image */}
                 <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image
-                    src={pkg.image}
-                    alt={pkg.destination}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+                  {pkg.image ? (
+                    <Image
+                      src={pkg.image}
+                      alt={pkg.destination}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary to-primary/5" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   
                   {/* Match Badge */}
@@ -406,7 +410,7 @@ export function ResultsSection({ query }: { query?: string }) {
                         <MapPin className="h-4 w-4 text-primary" />
                         {pkg.destination}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">{pkg.agency}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{pkg.agency}</p>
                     </div>
                   </div>
 
@@ -480,12 +484,12 @@ export function ResultsSection({ query }: { query?: string }) {
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   className="group"
                 >
-                  <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.04] transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
+                  <div className="flex h-full flex-col rounded-[1.35rem] border border-border bg-card p-5 shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10">
                     <div className="mb-4 flex items-start gap-3">
                       <AgencyLogo
                         src={agency.logo}
                         name={agency.name}
-                        className="h-16 w-16 shrink-0 rounded-2xl border border-border"
+                        className="h-16 w-16 shrink-0 rounded-2xl border border-border bg-white shadow-sm"
                       />
                       <div className="min-w-0">
                         <h4 className="truncate text-base font-semibold text-foreground">{agency.name}</h4>

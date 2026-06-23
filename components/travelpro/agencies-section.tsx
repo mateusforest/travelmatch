@@ -92,14 +92,14 @@ export function AgenciesSection() {
   }, [])
 
   return (
-    <section className="py-24" id="agencias">
+    <section className="py-20 md:py-24" id="agencias">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-14 text-center"
+          className="mb-10 text-center md:mb-12"
         >
           <h2 className="mb-4 text-3xl font-bold text-foreground text-balance md:text-4xl lg:text-5xl">
             Especialistas selecionados para cada tipo de{" "}
@@ -134,12 +134,12 @@ export function AgenciesSection() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group"
               >
-                <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.04] transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
+                <div className="flex h-full flex-col rounded-[1.35rem] border border-border bg-card p-5 shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10">
                   <div className="mb-4 flex items-start gap-3">
                     <AgencyLogo
                       src={agency.logo}
                       name={agency.name}
-                      className="h-16 w-16 shrink-0 rounded-2xl border border-border"
+                      className="h-16 w-16 shrink-0 rounded-2xl border border-border bg-white shadow-sm"
                     />
                     <div className="min-w-0">
                       <h3 className="truncate text-lg font-semibold text-foreground">
@@ -152,7 +152,7 @@ export function AgenciesSection() {
                     </div>
                   </div>
 
-                  <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
                     {agency.description}
                   </p>
 

@@ -44,7 +44,9 @@ export type PublicPackage = {
   agency_city: string | null
   agency_state: string | null
   agency_description: string | null
+  agency_phone: string | null
   category_slug: string | null
+  gallery_images: string[]
 }
 
 type PublicAgencyRow = Omit<PublicAgency, "packages"> & {
@@ -76,8 +78,10 @@ type PublicPackageRow = {
     city: string | null
     state: string | null
     description: string | null
+    phone: string | null
   }[] | null
   travel_categories: { slug: string | null }[] | null
+  package_gallery_images?: { image_url: string; position: number }[] | null
 }
 
 export async function getPublicAgencyBySlug(slug: string): Promise<PublicAgency | null> {
@@ -140,7 +144,7 @@ export async function getPublicPackageBySlug(slug: string): Promise<PublicPackag
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from("packages")
-    .select("id,slug,title,destination,description,price_from,duration_days,image_url,agency_id,agency_profiles(slug,agency_name,city,state,description),travel_categories(slug)")
+    .select("id,slug,title,destination,description,price_from,duration_days,image_url,agency_id,agency_profiles(slug,agency_name,city,state,description,phone),travel_categories(slug),package_gallery_images(image_url,position)")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle()
@@ -151,6 +155,12 @@ export async function getPublicPackageBySlug(slug: string): Promise<PublicPackag
 
   const pkg = data as PublicPackageRow
   const agency = pkg.agency_profiles?.[0]
+  const gallery = (pkg.package_gallery_images ?? [])
+    .sort((a, b) => a.position - b.position)
+    .map((image) => image.image_url)
+  const galleryImages = pkg.image_url
+    ? [pkg.image_url, ...gallery.filter((image) => image !== pkg.image_url)]
+    : gallery
 
   return {
     id: pkg.id,
@@ -167,6 +177,8 @@ export async function getPublicPackageBySlug(slug: string): Promise<PublicPackag
     agency_city: agency?.city ?? null,
     agency_state: agency?.state ?? null,
     agency_description: agency?.description ?? null,
+    agency_phone: agency?.phone ?? null,
     category_slug: pkg.travel_categories?.[0]?.slug ?? null,
+    gallery_images: galleryImages.slice(0, 6),
   }
 }

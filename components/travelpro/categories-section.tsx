@@ -127,7 +127,7 @@ export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => 
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mx-auto mb-10 max-w-3xl text-center md:mb-12"
+          className="mx-auto mb-8 max-w-3xl text-center md:mb-10"
         >
           <h2 className="mb-3 text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
             Explore por <span className="text-primary">categoria</span>
@@ -153,7 +153,7 @@ export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => 
                 className="group text-left"
                 onClick={() => onSearch?.(category.name)}
               >
-                <div className="relative aspect-[5/6] overflow-hidden rounded-2xl border border-white/10 bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/10">
+                <div className="relative aspect-[5/6] overflow-hidden rounded-[1.35rem] border border-white/10 bg-card shadow-sm shadow-black/[0.05] ring-1 ring-black/[0.03] transition-all duration-500 group-hover:-translate-y-1.5 group-hover:shadow-2xl group-hover:shadow-primary/10">
                   {imageFailed ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/40 via-foreground/70 to-primary/20" />
                   ) : (
@@ -166,8 +166,8 @@ export function CategoriesSection({ onSearch }: { onSearch?: (value: string) => 
                       onError={() => setFailedImages((current) => new Set(current).add(category.slug))}
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5 transition-opacity duration-500" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.20),transparent_34%)] opacity-80" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/42 to-black/8 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_32%,rgba(255,111,0,0.12))] opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
                   <div className="absolute bottom-0 left-0 right-0 p-5">

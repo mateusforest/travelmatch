@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Globe, Instagram, MapPin, Package, Phone, Star } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
@@ -21,6 +22,13 @@ export default async function PublicAgencyPage({
     notFound()
   }
 
+  const websiteHref = agency.website?.startsWith("http") ? agency.website : agency.website ? `https://${agency.website}` : null
+  const instagramHref = agency.instagram?.startsWith("http")
+    ? agency.instagram
+    : agency.instagram
+      ? `https://instagram.com/${agency.instagram.replace(/^@/, "")}`
+      : null
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
@@ -28,8 +36,8 @@ export default async function PublicAgencyPage({
       <section className="container mx-auto px-4 pb-16 pt-28 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03]">
-              <div className="relative h-44 bg-gradient-to-r from-primary/30 to-primary/10">
+            <div className="overflow-hidden rounded-[1.35rem] border border-border bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02]">
+              <div className="relative h-52 bg-gradient-to-br from-primary/25 via-secondary to-primary/10 md:h-64">
                 {agency.banner_url && (
                   <Image
                     src={agency.banner_url}
@@ -45,7 +53,7 @@ export default async function PublicAgencyPage({
                 <AgencyLogo
                   src={agency.logo_url}
                   name={agency.agency_name}
-                  className="-mt-12 mb-4 h-24 w-24 rounded-2xl border-4 border-card"
+                  className="-mt-14 mb-4 h-28 w-28 rounded-3xl border-4 border-card bg-white shadow-lg shadow-black/10"
                 />
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">
                   {agency.agency_name}
@@ -72,17 +80,17 @@ export default async function PublicAgencyPage({
                       {agency.phone}
                     </span>
                   )}
-                  {agency.website && (
-                    <span className="inline-flex items-center gap-1.5">
+                  {websiteHref && (
+                    <Link href={websiteHref} target="_blank" className="inline-flex items-center gap-1.5 hover:text-foreground">
                       <Globe className="h-4 w-4 text-primary" />
                       {agency.website}
-                    </span>
+                    </Link>
                   )}
-                  {agency.instagram && (
-                    <span className="inline-flex items-center gap-1.5">
+                  {instagramHref && (
+                    <Link href={instagramHref} target="_blank" className="inline-flex items-center gap-1.5 hover:text-foreground">
                       <Instagram className="h-4 w-4 text-primary" />
                       {agency.instagram}
-                    </span>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -106,7 +114,7 @@ export default async function PublicAgencyPage({
                       agencyId={agency.id}
                       eventType="view_package"
                       ctaLabel="Ver pacote"
-                      className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
+                      className="overflow-hidden rounded-[1.35rem] border border-border bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
                     >
                       <div className="relative aspect-[16/9] bg-secondary">
                         {pkg.image_url ? (

@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { Clock, MapPin, Package, Store } from "lucide-react"
+import { Clock, MapPin, MessageCircle, Package, Store } from "lucide-react"
 import { Header } from "@/components/travelpro/header"
 import { Footer } from "@/components/travelpro/footer"
 import { LeadForm } from "@/components/travelpro/lead-form"
@@ -20,6 +20,11 @@ export default async function PublicPackagePage({
     notFound()
   }
 
+  const phoneDigits = pkg.agency_phone?.replace(/\D/g, "") ?? ""
+  const whatsappUrl = phoneDigits
+    ? `https://wa.me/${phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`}`
+    : null
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
@@ -27,7 +32,7 @@ export default async function PublicPackagePage({
       <section className="container mx-auto px-4 pb-16 pt-28 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-black/[0.03]">
+            <div className="overflow-hidden rounded-[1.35rem] border border-border bg-card shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02]">
               <div className="relative aspect-[16/9] bg-secondary">
                 {pkg.image_url ? (
                   <Image
@@ -43,6 +48,20 @@ export default async function PublicPackagePage({
                   </div>
                 )}
               </div>
+              {pkg.gallery_images.length > 1 && (
+                <div className="grid grid-cols-3 gap-2 border-b border-border bg-secondary/20 p-3 sm:grid-cols-5">
+                  {pkg.gallery_images.slice(1).map((imageUrl) => (
+                    <div key={imageUrl} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-secondary">
+                      <Image
+                        src={imageUrl}
+                        alt={pkg.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="p-6">
                 <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4 text-primary" />
@@ -64,7 +83,7 @@ export default async function PublicPackagePage({
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm shadow-black/[0.03]">
+            <div className="mt-6 rounded-[1.35rem] border border-border bg-card p-5 shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02]">
               <p className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Store className="h-4 w-4 text-primary" />
                 Agência responsável
@@ -88,6 +107,20 @@ export default async function PublicPackagePage({
                   className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
                 >
                   Ver perfil da agência
+                </TrackedLink>
+              )}
+              {whatsappUrl && (
+                <TrackedLink
+                  href={whatsappUrl}
+                  target="_blank"
+                  packageId={pkg.id}
+                  agencyId={pkg.agency_id}
+                  eventType="whatsapp_click"
+                  ctaLabel="WhatsApp"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Falar no WhatsApp
                 </TrackedLink>
               )}
             </div>

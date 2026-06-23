@@ -12,7 +12,7 @@ type FeaturedAgenciesStripProps = {
 
 export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) {
   return (
-    <section className="py-16 md:py-20">
+    <section className="py-14 md:py-20">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
@@ -44,12 +44,12 @@ export function FeaturedAgenciesStrip({ agencies }: FeaturedAgenciesStripProps) 
               >
                 <Link
                   href={`/agencias/${agency.slug}`}
-                  className="group flex h-full gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm shadow-black/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
+                  className="group flex h-full gap-4 rounded-[1.35rem] border border-border bg-card p-4 shadow-sm shadow-black/[0.04] ring-1 ring-black/[0.02] transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
                 >
                   <AgencyLogo
                     src={agency.logoUrl}
                     name={agency.name}
-                    className="h-16 w-16 shrink-0 rounded-2xl border border-border"
+                    className="h-16 w-16 shrink-0 rounded-2xl border border-border bg-white shadow-sm"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
